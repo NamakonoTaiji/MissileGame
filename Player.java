@@ -8,7 +8,7 @@ public class Player implements Emitter {
     private double angle;
     private double speed;
     private double maxTurnRate;
-    private double infraredEmission = 0.9;
+    private double infraredEmission = 1.1;
     private boolean upPressed;
     private boolean leftPressed;
     private boolean rightPressed;
@@ -39,7 +39,7 @@ public class Player implements Emitter {
 
         if (zPressed) {
             if (!isBeforeZPressed) {
-                flareManager.addFlare(x, y, 1.0, angle);
+                flareManager.addFlare(x, y, -0.5, angle);
                 isBeforeZPressed = true;
             }
         } else {

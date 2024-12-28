@@ -106,9 +106,13 @@ public class MissileSimulator extends JPanel implements KeyListener {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
 
+        g.setColor(new Color(170, 170, 170));
+        g.fillRect(0, 0, this.getWidth(), this.getHeight());
+
         player.draw(g2d);
         missileLauncher.draw(g2d, player.getX(), player.getY());
 
+        g.setColor(Color.GRAY);
         coordinatesLabel.setText(String.format("Coordinates: (%.2f, %.2f)", player.getX(), player.getY()));
         double launcherToTargetAngle = missileLauncher.getLauncherToTargetAngle();
         angleLabel.setText(String.format("Angle: %.2f", Math.toDegrees(launcherToTargetAngle)));

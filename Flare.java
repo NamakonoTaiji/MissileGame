@@ -30,7 +30,7 @@ public class Flare implements Emitter {
 
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
-        g2d.setColor(Color.YELLOW);
+        g2d.setColor(new Color(250, 170, 70));
         g2d.drawOval((int) (x), (int) (y), 3, 3);
     }
 

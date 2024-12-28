@@ -18,7 +18,7 @@ public class Missile {
     private int burnTimeOfBooster = 800;
     private double deltaVOfBooster = 0.0026;
     private double airResistance = 0.9991;
-    private double seekerFOV = Math.toRadians(5);
+    private double seekerFOV = Math.toRadians(1);
     private double seekerAngle;
     private int lifeSpan = 2000;
     private int age = 0;
@@ -59,11 +59,12 @@ public class Missile {
             double emitterX = emitter.getX();
             double emitterY = emitter.getY();
             double emitterLOSAngle = Math.atan2(emitterY - y, emitterX - x); // ミサイルを起点とする視線角度に修正
-            double angleDifferenceToEmitter = (seekerAngle - emitterLOSAngle + PI * 3) % (PI * 2) - PI;
+            double angleDifferenceToEmitter = (seekerAngle - emitterLOSAngle + PI * 3) % (PI * 2) - PI; // 首振り角 - 熱源LOS角
             double infraredEmission = emitter.getInfraredEmission();
-            boolean isCloseEmitter = Math.sqrt(Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2)) < 80;
-            boolean isCloseAngle = Math.abs(angleDifferenceToEmitter) <= seekerFOV + Math.toRadians(10);
+            boolean isCloseEmitter = Math.sqrt(Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2)) < 80; // 熱源に近いかどうか
+            boolean isCloseAngle = Math.abs(angleDifferenceToEmitter) <= seekerFOV + Math.toRadians(0); // 熱源に視野角が近いかどうか
             if (Math.abs(angleDifferenceToEmitter) <= seekerFOV || (isCloseEmitter && isCloseAngle)) {
+                // より大きい熱源に吸われる
                 weightedSumX += emitterX * infraredEmission;
                 weightedSumY += emitterY * infraredEmission;
                 totalWeight += infraredEmission;
@@ -73,15 +74,6 @@ public class Missile {
         if (totalWeight > 0) {
             targetX = weightedSumX / totalWeight;
             targetY = weightedSumY / totalWeight;
-            double deltaX = targetX - x;
-            double deltaY = targetY - y;
-            targetAngle = Math.atan2(deltaY, deltaX);
-            seekerAngle = targetAngle;
-        }
-
-        if (count > 0) {
-            targetX = sumX / count;
-            targetY = sumY / count;
             double deltaX = targetX - x;
             double deltaY = targetY - y;
             targetAngle = Math.atan2(deltaY, deltaX);
