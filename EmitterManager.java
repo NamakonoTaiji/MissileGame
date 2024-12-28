@@ -14,7 +14,9 @@ public class EmitterManager {
     }
 
     public void removeEmitter(Emitter emitter) {
-        emitters.remove(emitter);
+        synchronized (emitters) {
+            emitters.remove(emitter);
+        }
     }
 
     public List<Emitter> getEmitters() {

@@ -68,6 +68,7 @@ public class Player implements Emitter {
         g2d.setTransform(originalTransform);
         g2d.drawOval((int) (x - ARROW_SIZE), (int) (y - ARROW_SIZE), ARROW_SIZE * 2, ARROW_SIZE * 2);
         flareManager.drawFlares(g2d);
+        // System.out.println(flareManager.getFlareSize());
     }
 
     public void setUpPressed(boolean upPressed) {

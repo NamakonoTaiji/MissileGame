@@ -68,7 +68,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         debugLabel = new JLabel();
         debugLabel.setFont(new Font("Serif", Font.PLAIN, 18));
-        debugLabel.setBounds(10, 90, 300, 30);
+        debugLabel.setBounds(10, 90, 900, 30);
         add(debugLabel);
 
         setLayout(null);
@@ -109,9 +109,11 @@ public class MissileSimulator extends JPanel implements KeyListener {
         player.draw(g2d);
         missileLauncher.draw(g2d, player.getX(), player.getY());
 
-        for (Emitter emitter : emitterManager.getEmitters()) {
-            if (emitter instanceof Flare) {
-                ((Flare) emitter).draw(g2d);
+        synchronized (emitterManager) {
+            for (Emitter emitter : emitterManager.getEmitters()) {
+                if (emitter instanceof Flare) {
+                    ((Flare) emitter).draw(g2d);
+                }
             }
         }
 
@@ -144,7 +146,6 @@ public class MissileSimulator extends JPanel implements KeyListener {
                 break;
             case KeyEvent.VK_Z:
                 player.setZPressed(true);
-                flareManager.addFlare(player.getX(), player.getY(), 1, player.getAngle());
                 break;
         }
     }
