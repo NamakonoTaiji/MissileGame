@@ -18,7 +18,7 @@ public class Missile {
     private int burnTimeOfBooster = 800;
     private double deltaVOfBooster = 0.0026;
     private double airResistance = 0.9991;
-    private double seekerFOV = Math.toRadians(25);
+    private double seekerFOV = Math.toRadians(5);
     private double seekerAngle;
     private int lifeSpan = 3000;
     private int age = 0;
@@ -55,11 +55,10 @@ public class Missile {
         for (Emitter emitter : emitters) {
             double emitterX = emitter.getX();
             double emitterY = emitter.getY();
-            double emitterLOSAngle = Math.atan2(emitterY, emitterX);
+            double emitterLOSAngle = Math.atan2(emitterY - y, emitterX - x); // ミサイルを起点とする視線角度に修正
             double angleDifferenceToEmitter = (seekerAngle - emitterLOSAngle + PI * 3) % (PI * 2) - PI;
-            boolean isCloseEmitter = Math.sqrt(Math.pow(emitterX - x, 2) + Math
-                    .pow(emitterY - y, 2)) < 80;
-            boolean isCloseAngle = Math.abs(angleDifferenceToEmitter) <= seekerFOV + Math.toDegrees(10);
+            boolean isCloseEmitter = Math.sqrt(Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2)) < 80;
+            boolean isCloseAngle = Math.abs(angleDifferenceToEmitter) <= seekerFOV + Math.toRadians(1);
             if (Math.abs(angleDifferenceToEmitter) <= seekerFOV || (isCloseEmitter && isCloseAngle)) {
                 sumX += emitterX;
                 sumY += emitterY;
@@ -79,6 +78,7 @@ public class Missile {
         System.out.println(count);
         debugX = targetX;
         debugY = targetY;
+
         // 角度の差を計算し、正規化
         switch (navigationMode) {
             case "PPN": {
@@ -129,11 +129,6 @@ public class Missile {
         age += 1;
     }
 
-    public boolean isExpired() {
-        return age >= lifeSpan;
-    }
-
-    // ミサイルの描画
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
@@ -153,13 +148,20 @@ public class Missile {
         g2d.drawOval((int) debugX - 5, (int) debugY - 5, 10, 10);
 
         // seekerAngleの方向
+        g2d.drawLine((int) x, (int) y, (int) (x + 30 * Math.cos(seekerAngle)),
+                (int) (y + 30 * Math.sin(seekerAngle)));
 
+        // 視野角の範囲を描画（半透明の扇形）
         g2d.drawLine((int) x, (int) y, (int) (x + 30 * Math.cos(seekerAngle)),
                 (int) (y + 30 * Math.sin(seekerAngle)));
         double arcStart = Math.toDegrees(((seekerFOV / 2 - seekerAngle) + PI * 3) % (PI * 2) - PI);
         double arcExtent = Math.toDegrees(-seekerFOV);
         g2d.setColor(new Color(255, 0, 0, 10));
         g2d.fillArc((int) (x - 1000), (int) (y - 1000), 2000, 2000, (int) arcStart, (int) arcExtent);
+    }
+
+    public boolean isExpired() {
+        return age >= lifeSpan;
     }
 
     // ゲッターメソッド
