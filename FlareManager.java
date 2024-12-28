@@ -32,9 +32,6 @@ public class FlareManager {
                     emitterManager.removeEmitter(flare);
                     System.out.println("Flare and corresponding InfraredEmission removed");
                 }
-
-                System.out.println(flares.size());
-
             }
         }
     }
@@ -48,7 +45,6 @@ public class FlareManager {
     }
 
     public int getFlareSize() {
-        // System.out.println(flares.size());
         return flares.size();
     }
 }

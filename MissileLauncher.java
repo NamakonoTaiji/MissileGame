@@ -1,8 +1,10 @@
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.List;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.ArrayList;
 
 public class MissileLauncher {
     private double x;
@@ -14,8 +16,9 @@ public class MissileLauncher {
     private double reloadTime;
     private double launcherToTargetAngle = 0;
     private List<Missile> missiles;
+    private EmitterManager emitterManager; // EmitterManager のフィールド
 
-    public MissileLauncher(double x, double y, double launchSpeed, double reloadTime) {
+    public MissileLauncher(double x, double y, double launchSpeed, double reloadTime, EmitterManager emitterManager) {
         this.x = x;
         this.y = y;
         this.isLoaded = false;
@@ -23,6 +26,7 @@ public class MissileLauncher {
         this.launchSpeed = launchSpeed;
         this.reloadTime = reloadTime;
         this.missiles = Collections.synchronizedList(new ArrayList<>()); // スレッドセーフなリストに変更
+        this.emitterManager = emitterManager; // 初期化
     }
 
     public void loadMissile() {
@@ -31,10 +35,11 @@ public class MissileLauncher {
 
     public void launchMissile() {
         if (isLoaded) {
-            Missile missile = new Missile(x, y, 0, launcherToTargetAngle, navigationMode);
+            Missile missile = new Missile(x, y, launchSpeed, launcherToTargetAngle, navigationMode, emitterManager);
             missiles.add(missile);
-            System.out.println("Missile launched at angle" + String.format("%.2f", Math.toDegrees(
-                    launcherToTargetAngle)) + " with speed " + launchSpeed);
+            System.out.println(
+                    "Missile launched at angle " + String.format("%.2f", Math.toDegrees(launcherToTargetAngle)) +
+                            " with speed " + launchSpeed);
             isLoaded = false;
             missileCount = 0;
         } else {
@@ -54,7 +59,7 @@ public class MissileLauncher {
             Iterator<Missile> iterator = missiles.iterator();
             while (iterator.hasNext()) {
                 Missile missile = iterator.next();
-                missile.update(targetX, targetY);
+                missile.update();
                 if (missile.isExpired()) {
                     iterator.remove();
                 }
@@ -71,11 +76,11 @@ public class MissileLauncher {
     }
 
     public void setMissileMode() {
-        if (navigationMode == "PPN") {
+        if (navigationMode.equals("PPN")) {
             navigationMode = "PN";
-        } else if (navigationMode == "PN") {
+        } else if (navigationMode.equals("PN")) {
             navigationMode = "MPN";
-        } else if (navigationMode == "MPN") {
+        } else if (navigationMode.equals("MPN")) {
             navigationMode = "PPN";
         }
     }

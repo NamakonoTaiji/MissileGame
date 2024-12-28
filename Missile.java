@@ -1,6 +1,7 @@
 import java.awt.*;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.List;
 
 public class Missile {
     private final double PI = Math.PI;
@@ -11,38 +12,73 @@ public class Missile {
     private double angle;
     private double oldAngle;
     private double angleDifference;
+    private EmitterManager emitterManager;
 
-    private double missileMaxTurnRate = 0.009;
-    private int burnTimeOfBooster = 200;
-    private double deltaVOfBooster = 0.035;
-    private double airResistance = 0.996;
-    private double seekerFOV = Math.toRadians(5);
-    private double seekerFOVAngle;
-    private int lifeSpan = 800;
+    private double missileMaxTurnRate = 0.0025;
+    private int burnTimeOfBooster = 800;
+    private double deltaVOfBooster = 0.0026;
+    private double airResistance = 0.9991;
+    private double seekerFOV = Math.toRadians(25);
+    private double seekerAngle;
+    private int lifeSpan = 3000;
     private int age = 0;
+    private double targetX = 0;
+    private double targetY = 0;
+    private double targetAngle = 0;
+    private double debugX = 0;
+    private double debugY = 0;
 
     private String navigationMode;
 
-    private final int TRAIL_LENGTH = 150; // 軌跡の長さ
+    private final int TRAIL_LENGTH = 200; // 軌跡の長さ
     private Queue<Point> trail; // 軌跡を保存するキュー
 
-    public Missile(double x, double y, double speed, double angle, String navigationMode) {
+    public Missile(double x, double y, double speed, double angle, String navigationMode,
+            EmitterManager emitterManager) {
         this.x = x;
         this.y = y;
         this.speed = speed;
         this.angle = angle;
-        this.seekerFOVAngle = angle;
         this.navigationMode = navigationMode;
+        this.seekerAngle = angle;
         this.oldAngle = angle;
+        this.emitterManager = emitterManager;
         this.trail = new LinkedList<>();
     }
 
-    public void update(double targetX, double targetY) {
-        // 目標（自機）への角度を計算
-        double deltaX = targetX - x;
-        double deltaY = targetY - y;
-        double targetAngle = Math.atan2(deltaY, deltaX);
+    public void update() {
+        List<Emitter> emitters = emitterManager.getEmitters();
+        double sumX = 0;
+        double sumY = 0;
+        int count = 0;
 
+        for (Emitter emitter : emitters) {
+            double emitterX = emitter.getX();
+            double emitterY = emitter.getY();
+            double emitterLOSAngle = Math.atan2(emitterY, emitterX);
+            double angleDifferenceToEmitter = (seekerAngle - emitterLOSAngle + PI * 3) % (PI * 2) - PI;
+            boolean isCloseEmitter = Math.sqrt(Math.pow(emitterX - x, 2) + Math
+                    .pow(emitterY - y, 2)) < 80;
+            boolean isCloseAngle = Math.abs(angleDifferenceToEmitter) <= seekerFOV + Math.toDegrees(10);
+            if (Math.abs(angleDifferenceToEmitter) <= seekerFOV || (isCloseEmitter && isCloseAngle)) {
+                sumX += emitterX;
+                sumY += emitterY;
+                count++;
+            }
+        }
+
+        if (count > 0) {
+            targetX = sumX / count;
+            targetY = sumY / count;
+            double deltaX = targetX - x;
+            double deltaY = targetY - y;
+            targetAngle = Math.atan2(deltaY, deltaX);
+            seekerAngle = targetAngle;
+        }
+
+        System.out.println(count);
+        debugX = targetX;
+        debugY = targetY;
         // 角度の差を計算し、正規化
         switch (navigationMode) {
             case "PPN": {
@@ -60,11 +96,10 @@ public class Missile {
             case "MPN": {
                 // 修正比例航法(MPN)
                 angleDifference = (targetAngle - oldAngle + PI * 3) % (PI * 2) - PI;
-                angleDifference = angleDifference * 3 + ((targetAngle - angle + PI * 3) % (PI * 2) - PI) * 0.024;
+                angleDifference = angleDifference * 3 + ((targetAngle - angle + PI * 3) % (PI * 2) - PI) * 0.0007;
                 oldAngle = targetAngle;
                 break;
             }
-
         }
         // 角度の差をクランプ
         angleDifference = MathUtils.clamp(angleDifference, -missileMaxTurnRate, missileMaxTurnRate);
@@ -112,6 +147,19 @@ public class Missile {
         g2d.drawOval((int) (x - 2.5), (int) (y - 2.5), 5, 5);
         g.drawLine((int) x, (int) y, (int) ((x) + 10 * Math.cos(angle)),
                 (int) ((y) + 10 * Math.sin(angle)));
+
+        // シーカーの視点
+        g2d.setColor(Color.BLACK);
+        g2d.drawOval((int) debugX - 5, (int) debugY - 5, 10, 10);
+
+        // seekerAngleの方向
+
+        g2d.drawLine((int) x, (int) y, (int) (x + 30 * Math.cos(seekerAngle)),
+                (int) (y + 30 * Math.sin(seekerAngle)));
+        double arcStart = Math.toDegrees(((seekerFOV / 2 - seekerAngle) + PI * 3) % (PI * 2) - PI);
+        double arcExtent = Math.toDegrees(-seekerFOV);
+        g2d.setColor(new Color(255, 0, 0, 10));
+        g2d.fillArc((int) (x - 1000), (int) (y - 1000), 2000, 2000, (int) arcStart, (int) arcExtent);
     }
 
     // ゲッターメソッド

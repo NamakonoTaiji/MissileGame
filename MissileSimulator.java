@@ -2,6 +2,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
@@ -23,6 +25,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
     private JLabel debugLabel;
 
     private Timer timer;
+    List<Missile> missiles = Collections.synchronizedList(new ArrayList<>());
 
     public MissileSimulator() {
         setFocusable(true);
@@ -30,10 +33,10 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         emitterManager = new EmitterManager();
 
-        player = new Player(200.0, 200.0, 1.0, 0.012, emitterManager); // EmitterManagerを渡す
+        player = new Player(200.0, 200.0, 0.4, 0.003, emitterManager); // EmitterManagerを渡す
         emitterManager.addEmitter(player);
 
-        missileLauncher = new MissileLauncher(150, 150, 5.0, 30);
+        missileLauncher = new MissileLauncher(150, 150, 0.0, 30, emitterManager);
         flareManager = new FlareManager(emitterManager); // FlareManagerの初期化時にEmitterManagerを渡す
 
         timer = new Timer();
@@ -43,7 +46,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
                 update();
                 repaint();
             }
-        }, 0, 10);
+        }, 0, 3);
 
         // ラベルの作成
         coordinatesLabel = new JLabel();
@@ -77,6 +80,16 @@ public class MissileSimulator extends JPanel implements KeyListener {
     public void update() {
         player.update();
         missileLauncher.updateMissiles(player.getX(), player.getY());
+        synchronized (missiles) {
+            Iterator<Missile> iterator = missiles.iterator();
+            while (iterator.hasNext()) {
+                Missile missile = iterator.next();
+                missile.update();
+                if (missile.isExpired()) {
+                    iterator.remove();
+                }
+            }
+        }
         flareManager.updateFlares();
         emitterManager.updateEmitters();
         checkCollisions();
@@ -108,7 +121,9 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         player.draw(g2d);
         missileLauncher.draw(g2d, player.getX(), player.getY());
-
+        for (Missile missile : missiles) {
+            missile.draw(g);
+        }
         synchronized (emitterManager) {
             for (Emitter emitter : emitterManager.getEmitters()) {
                 if (emitter instanceof Flare) {

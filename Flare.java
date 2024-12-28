@@ -8,7 +8,7 @@ public class Flare implements Emitter {
     private double speed;
     private double angle;
     private int age = 0;
-    private final double LIFESPAN = 400;
+    private final double LIFESPAN = 1500;
 
     public Flare(double x, double y, double speed, double angle) {
         this.x = x;
