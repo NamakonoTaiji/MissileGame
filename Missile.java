@@ -12,10 +12,10 @@ public class Missile {
     private double oldAngle;
     private double angleDifference;
 
-    private double missileMaxTurnRate = 0.01;
+    private double missileMaxTurnRate = 0.009;
     private int burnTimeOfBooster = 200;
-    private double deltaVOfBooster = 0.025;
-    private double airResistance = 0.997;
+    private double deltaVOfBooster = 0.035;
+    private double airResistance = 0.996;
     private double seekerFOV = Math.toRadians(5);
     private double seekerFOVAngle;
     private int lifeSpan = 800;
@@ -48,18 +48,21 @@ public class Missile {
             case "PPN": {
                 // 単追尾(PPN)
                 angleDifference = (targetAngle - angle + PI * 3) % (PI * 2) - PI;
+                break;
             }
             case "PN": {
                 // 比例航法(PN)
                 angleDifference = (targetAngle - oldAngle + PI * 3) % (PI * 2) - PI;
                 angleDifference = angleDifference * 3;
                 oldAngle = targetAngle;
+                break;
             }
             case "MPN": {
                 // 修正比例航法(MPN)
                 angleDifference = (targetAngle - oldAngle + PI * 3) % (PI * 2) - PI;
-                angleDifference = angleDifference * 3 + ((targetAngle - angle + PI * 3) % (PI * 2) - PI) * 0.02;
+                angleDifference = angleDifference * 3 + ((targetAngle - angle + PI * 3) % (PI * 2) - PI) * 0.024;
                 oldAngle = targetAngle;
+                break;
             }
 
         }
@@ -70,7 +73,7 @@ public class Missile {
         // ブースター燃焼中は加速
         if (age <= burnTimeOfBooster) {
             speed += deltaVOfBooster;
-            speed *= (1 - Math.abs(angleDifference)); // 旋回による減速
+            speed *= (1 - Math.abs(angleDifference) * 1.4); // 旋回による減速
         }
 
         // 空気抵抗による減速
