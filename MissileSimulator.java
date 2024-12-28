@@ -2,24 +2,25 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.Iterator;
 
 public class MissileSimulator extends JPanel implements KeyListener {
-
     public static final int PANEL_WIDTH = 1600;
     public static final int PANEL_HEIGHT = 900;
 
     private Player player;
     private MissileLauncher missileLauncher;
+    private EmitterManager emitterManager;
     private FlareManager flareManager;
 
     private JLabel coordinatesLabel;
     private JLabel angleLabel;
     private JLabel memoryLabel;
     private JLabel missileModeLabel;
+    private JLabel debugLabel;
 
     private Timer timer;
 
@@ -27,9 +28,13 @@ public class MissileSimulator extends JPanel implements KeyListener {
         setFocusable(true);
         addKeyListener(this);
 
-        player = new Player(200.0, 200.0, 1.0, 0.012);
+        emitterManager = new EmitterManager();
+
+        player = new Player(200.0, 200.0, 1.0, 0.012, emitterManager); // EmitterManagerを渡す
+        emitterManager.addEmitter(player);
+
         missileLauncher = new MissileLauncher(150, 150, 5.0, 30);
-        flareManager = new FlareManager();
+        flareManager = new FlareManager(emitterManager); // FlareManagerの初期化時にEmitterManagerを渡す
 
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
@@ -61,6 +66,11 @@ public class MissileSimulator extends JPanel implements KeyListener {
         missileModeLabel.setBounds(10, 70, 300, 30);
         add(missileModeLabel);
 
+        debugLabel = new JLabel();
+        debugLabel.setFont(new Font("Serif", Font.PLAIN, 18));
+        debugLabel.setBounds(10, 90, 300, 30);
+        add(debugLabel);
+
         setLayout(null);
     }
 
@@ -68,13 +78,14 @@ public class MissileSimulator extends JPanel implements KeyListener {
         player.update();
         missileLauncher.updateMissiles(player.getX(), player.getY());
         flareManager.updateFlares();
+        emitterManager.updateEmitters();
         checkCollisions();
     }
 
     private void checkCollisions() {
         List<Missile> missiles = missileLauncher.getMissiles();
-        double hitRadius = 6; // 自機のヒットボックスの半径
-        double missileHitRadius = 1.0; // ミサイルのヒットボックスの半径
+        double hitRadius = 6;
+        double missileHitRadius = 1.0;
 
         synchronized (missiles) {
             Iterator<Missile> iterator = missiles.iterator();
@@ -97,14 +108,19 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         player.draw(g2d);
         missileLauncher.draw(g2d, player.getX(), player.getY());
-        flareManager.drawFlares(g);
 
-        // ラベルの更新
+        for (Emitter emitter : emitterManager.getEmitters()) {
+            if (emitter instanceof Flare) {
+                ((Flare) emitter).draw(g2d);
+            }
+        }
+
         coordinatesLabel.setText(String.format("Coordinates: (%.2f, %.2f)", player.getX(), player.getY()));
         double launcherToTargetAngle = missileLauncher.getLauncherToTargetAngle();
         angleLabel.setText(String.format("Angle: %.2f", Math.toDegrees(launcherToTargetAngle)));
         memoryLabel.setText(String.format("Memory Usage: %,d KB", getMemoryUsage()));
         missileModeLabel.setText(String.format("Navigation: " + missileLauncher.getMissileMode()));
+        debugLabel.setText(String.format("Emitters: " + emitterManager.getEmitters().size()));
     }
 
     @Override
@@ -127,8 +143,8 @@ public class MissileSimulator extends JPanel implements KeyListener {
                 missileLauncher.setMissileMode();
                 break;
             case KeyEvent.VK_Z:
-                // Zキーが押されたときにフレアを発射
                 player.setZPressed(true);
+                flareManager.addFlare(player.getX(), player.getY(), 1, player.getAngle());
                 break;
         }
     }
@@ -147,7 +163,6 @@ public class MissileSimulator extends JPanel implements KeyListener {
                 player.setRightPressed(false);
                 break;
             case KeyEvent.VK_Z:
-                // Zキーが離されたときにフレアの発射を停止
                 player.setZPressed(false);
                 break;
         }
@@ -155,7 +170,6 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
     @Override
     public void keyTyped(KeyEvent e) {
-        // 何もしない
     }
 
     public long getMemoryUsage() {

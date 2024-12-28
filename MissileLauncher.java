@@ -7,7 +7,6 @@ import java.util.Iterator;
 public class MissileLauncher {
     private double x;
     private double y;
-    private double angle;
     private boolean isLoaded;
     private String navigationMode = "PPN";
     private int missileCount;
@@ -19,7 +18,6 @@ public class MissileLauncher {
     public MissileLauncher(double x, double y, double launchSpeed, double reloadTime) {
         this.x = x;
         this.y = y;
-        this.angle = 0;
         this.isLoaded = false;
         this.missileCount = 0;
         this.launchSpeed = launchSpeed;
@@ -34,9 +32,7 @@ public class MissileLauncher {
     public void launchMissile() {
         if (isLoaded) {
             Missile missile = new Missile(x, y, 0, launcherToTargetAngle, navigationMode);
-            synchronized (missiles) {
-                missiles.add(missile);
-            }
+            missiles.add(missile);
             System.out.println("Missile launched at angle" + String.format("%.2f", Math.toDegrees(
                     launcherToTargetAngle)) + " with speed " + launchSpeed);
             isLoaded = false;
@@ -64,10 +60,6 @@ public class MissileLauncher {
                 }
             }
         }
-    }
-
-    public void rotate(double newAngle) {
-        this.angle = newAngle;
     }
 
     public boolean isReadyToLaunch() {
@@ -112,8 +104,6 @@ public class MissileLauncher {
     }
 
     public List<Missile> getMissiles() {
-        synchronized (missiles) {
-            return missiles;
-        }
+        return missiles;
     }
 }

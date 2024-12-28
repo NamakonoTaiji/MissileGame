@@ -1,6 +1,6 @@
 import java.awt.*;
 
-public class Flare {
+public class Flare implements Emitter {
     private double infraredEmission = 1.0;
     private double airResistance = 0.95;
     private double x;
@@ -18,7 +18,6 @@ public class Flare {
     }
 
     public void update() {
-
         // 空気抵抗による減速
         speed = speed * airResistance;
 
@@ -31,7 +30,6 @@ public class Flare {
 
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
-        // フレアを描画
         g2d.setColor(Color.YELLOW);
         g2d.drawOval((int) (x), (int) (y), 3, 3);
     }
@@ -40,15 +38,18 @@ public class Flare {
         return age >= LIFESPAN;
     }
 
-    public double getIREmission() {
-        return infraredEmission;
-    }
-
+    @Override
     public double getX() {
         return x;
     }
 
+    @Override
     public double getY() {
         return y;
+    }
+
+    @Override
+    public double getInfraredEmission() {
+        return infraredEmission;
     }
 }
