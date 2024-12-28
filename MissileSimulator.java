@@ -25,7 +25,6 @@ public class MissileSimulator extends JPanel implements KeyListener {
     private JLabel debugLabel;
 
     private Timer timer;
-    List<Missile> missiles = Collections.synchronizedList(new ArrayList<>());
 
     public MissileSimulator() {
         setFocusable(true);
@@ -80,16 +79,6 @@ public class MissileSimulator extends JPanel implements KeyListener {
     public void update() {
         player.update();
         missileLauncher.updateMissiles(player.getX(), player.getY());
-        synchronized (missiles) {
-            Iterator<Missile> iterator = missiles.iterator();
-            while (iterator.hasNext()) {
-                Missile missile = iterator.next();
-                missile.update();
-                if (missile.isExpired()) {
-                    iterator.remove();
-                }
-            }
-        }
         flareManager.updateFlares();
         emitterManager.updateEmitters();
         checkCollisions();
@@ -121,16 +110,6 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         player.draw(g2d);
         missileLauncher.draw(g2d, player.getX(), player.getY());
-        for (Missile missile : missiles) {
-            missile.draw(g);
-        }
-        synchronized (emitterManager) {
-            for (Emitter emitter : emitterManager.getEmitters()) {
-                if (emitter instanceof Flare) {
-                    ((Flare) emitter).draw(g2d);
-                }
-            }
-        }
 
         coordinatesLabel.setText(String.format("Coordinates: (%.2f, %.2f)", player.getX(), player.getY()));
         double launcherToTargetAngle = missileLauncher.getLauncherToTargetAngle();

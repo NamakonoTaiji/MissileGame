@@ -8,7 +8,7 @@ public class Player implements Emitter {
     private double angle;
     private double speed;
     private double maxTurnRate;
-    private double infraredEmission = 1.0;
+    private double infraredEmission = 0.9;
     private boolean upPressed;
     private boolean leftPressed;
     private boolean rightPressed;

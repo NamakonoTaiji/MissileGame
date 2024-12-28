@@ -14,13 +14,13 @@ public class Missile {
     private double angleDifference;
     private EmitterManager emitterManager;
 
-    private double missileMaxTurnRate = 0.0025;
+    private double missileMaxTurnRate = 0.003;
     private int burnTimeOfBooster = 800;
     private double deltaVOfBooster = 0.0026;
     private double airResistance = 0.9991;
     private double seekerFOV = Math.toRadians(5);
     private double seekerAngle;
-    private int lifeSpan = 3000;
+    private int lifeSpan = 2000;
     private int age = 0;
     private double targetX = 0;
     private double targetY = 0;
@@ -48,6 +48,9 @@ public class Missile {
 
     public void update() {
         List<Emitter> emitters = emitterManager.getEmitters();
+        double weightedSumX = 0;
+        double weightedSumY = 0;
+        double totalWeight = 0;
         double sumX = 0;
         double sumY = 0;
         int count = 0;
@@ -57,13 +60,23 @@ public class Missile {
             double emitterY = emitter.getY();
             double emitterLOSAngle = Math.atan2(emitterY - y, emitterX - x); // ミサイルを起点とする視線角度に修正
             double angleDifferenceToEmitter = (seekerAngle - emitterLOSAngle + PI * 3) % (PI * 2) - PI;
+            double infraredEmission = emitter.getInfraredEmission();
             boolean isCloseEmitter = Math.sqrt(Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2)) < 80;
-            boolean isCloseAngle = Math.abs(angleDifferenceToEmitter) <= seekerFOV + Math.toRadians(1);
+            boolean isCloseAngle = Math.abs(angleDifferenceToEmitter) <= seekerFOV + Math.toRadians(10);
             if (Math.abs(angleDifferenceToEmitter) <= seekerFOV || (isCloseEmitter && isCloseAngle)) {
-                sumX += emitterX;
-                sumY += emitterY;
-                count++;
+                weightedSumX += emitterX * infraredEmission;
+                weightedSumY += emitterY * infraredEmission;
+                totalWeight += infraredEmission;
             }
+        }
+
+        if (totalWeight > 0) {
+            targetX = weightedSumX / totalWeight;
+            targetY = weightedSumY / totalWeight;
+            double deltaX = targetX - x;
+            double deltaY = targetY - y;
+            targetAngle = Math.atan2(deltaY, deltaX);
+            seekerAngle = targetAngle;
         }
 
         if (count > 0) {
@@ -75,7 +88,6 @@ public class Missile {
             seekerAngle = targetAngle;
         }
 
-        System.out.println(count);
         debugX = targetX;
         debugY = targetY;
 
@@ -96,7 +108,7 @@ public class Missile {
             case "MPN": {
                 // 修正比例航法(MPN)
                 angleDifference = (targetAngle - oldAngle + PI * 3) % (PI * 2) - PI;
-                angleDifference = angleDifference * 3 + ((targetAngle - angle + PI * 3) % (PI * 2) - PI) * 0.0007;
+                angleDifference = angleDifference * 3 + ((targetAngle - angle + PI * 3) % (PI * 2) - PI) * 0.001;
                 oldAngle = targetAngle;
                 break;
             }
@@ -108,7 +120,7 @@ public class Missile {
         // ブースター燃焼中は加速
         if (age <= burnTimeOfBooster) {
             speed += deltaVOfBooster;
-            speed *= (1 - Math.abs(angleDifference) * 1.4); // 旋回による減速
+            speed *= (1 - Math.abs(angleDifference) * 1.0); // 旋回による減速
         }
 
         // 空気抵抗による減速
@@ -147,17 +159,11 @@ public class Missile {
         g2d.setColor(Color.BLACK);
         g2d.drawOval((int) debugX - 5, (int) debugY - 5, 10, 10);
 
-        // seekerAngleの方向
-        g2d.drawLine((int) x, (int) y, (int) (x + 30 * Math.cos(seekerAngle)),
-                (int) (y + 30 * Math.sin(seekerAngle)));
-
         // 視野角の範囲を描画（半透明の扇形）
-        g2d.drawLine((int) x, (int) y, (int) (x + 30 * Math.cos(seekerAngle)),
-                (int) (y + 30 * Math.sin(seekerAngle)));
         double arcStart = Math.toDegrees(((seekerFOV / 2 - seekerAngle) + PI * 3) % (PI * 2) - PI);
         double arcExtent = Math.toDegrees(-seekerFOV);
         g2d.setColor(new Color(255, 0, 0, 10));
-        g2d.fillArc((int) (x - 1000), (int) (y - 1000), 2000, 2000, (int) arcStart, (int) arcExtent);
+        g2d.fillArc((int) (x - 1500), (int) (y - 1500), 3000, 3000, (int) arcStart, (int) arcExtent);
     }
 
     public boolean isExpired() {
