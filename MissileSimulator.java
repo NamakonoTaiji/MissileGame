@@ -27,7 +27,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         setFocusable(true);
         addKeyListener(this);
 
-        player = new Player(200.0, 200.0, 1.0, 0.01);
+        player = new Player(200.0, 200.0, 1.0, 0.012);
         missileLauncher = new MissileLauncher(150, 150, 5.0, 30);
         flareManager = new FlareManager();
 
@@ -104,7 +104,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         double launcherToTargetAngle = missileLauncher.getLauncherToTargetAngle();
         angleLabel.setText(String.format("Angle: %.2f", Math.toDegrees(launcherToTargetAngle)));
         memoryLabel.setText(String.format("Memory Usage: %,d KB", getMemoryUsage()));
-        missileModeLabel.setText(String.format("PNmode: " + Boolean.toString(missileLauncher.getMissileMode())));
+        missileModeLabel.setText(String.format("Navigation: " + missileLauncher.getMissileMode()));
     }
 
     @Override

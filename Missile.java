@@ -12,27 +12,27 @@ public class Missile {
     private double oldAngle;
     private double angleDifference;
 
-    private double missileMaxTurnRate = 0.009;
-    private int burnTimeOfBooster = 300;
-    private double deltaVOfBooster = 0.020;
+    private double missileMaxTurnRate = 0.01;
+    private int burnTimeOfBooster = 200;
+    private double deltaVOfBooster = 0.025;
     private double airResistance = 0.997;
     private double seekerFOV = Math.toRadians(5);
     private double seekerFOVAngle;
     private int lifeSpan = 800;
     private int age = 0;
 
-    private boolean isPNmode;
+    private String navigationMode;
 
     private final int TRAIL_LENGTH = 150; // 軌跡の長さ
     private Queue<Point> trail; // 軌跡を保存するキュー
 
-    public Missile(double x, double y, double speed, double angle, boolean isPNmode) {
+    public Missile(double x, double y, double speed, double angle, String navigationMode) {
         this.x = x;
         this.y = y;
         this.speed = speed;
         this.angle = angle;
         this.seekerFOVAngle = angle;
-        this.isPNmode = isPNmode;
+        this.navigationMode = navigationMode;
         this.oldAngle = angle;
         this.trail = new LinkedList<>();
     }
@@ -44,16 +44,25 @@ public class Missile {
         double targetAngle = Math.atan2(deltaY, deltaX);
 
         // 角度の差を計算し、正規化
-        if (isPNmode) {
-            // 比例航法(PN)
-            angleDifference = (targetAngle - oldAngle + PI * 3) % (PI * 2) - PI;
-            angleDifference *= 3;
-            oldAngle = targetAngle;
-        } else {
-            // 単追尾(PPN)
-            angleDifference = (targetAngle - angle + PI * 3) % (PI * 2) - PI;
-        }
+        switch (navigationMode) {
+            case "PPN": {
+                // 単追尾(PPN)
+                angleDifference = (targetAngle - angle + PI * 3) % (PI * 2) - PI;
+            }
+            case "PN": {
+                // 比例航法(PN)
+                angleDifference = (targetAngle - oldAngle + PI * 3) % (PI * 2) - PI;
+                angleDifference = angleDifference * 3;
+                oldAngle = targetAngle;
+            }
+            case "MPN": {
+                // 修正比例航法(MPN)
+                angleDifference = (targetAngle - oldAngle + PI * 3) % (PI * 2) - PI;
+                angleDifference = angleDifference * 3 + ((targetAngle - angle + PI * 3) % (PI * 2) - PI) * 0.02;
+                oldAngle = targetAngle;
+            }
 
+        }
         // 角度の差をクランプ
         angleDifference = MathUtils.clamp(angleDifference, -missileMaxTurnRate, missileMaxTurnRate);
         angle += angleDifference;

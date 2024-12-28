@@ -9,7 +9,7 @@ public class MissileLauncher {
     private double y;
     private double angle;
     private boolean isLoaded;
-    private boolean isPNmode = false;
+    private String navigationMode = "PPN";
     private int missileCount;
     private double launchSpeed;
     private double reloadTime;
@@ -33,7 +33,7 @@ public class MissileLauncher {
 
     public void launchMissile() {
         if (isLoaded) {
-            Missile missile = new Missile(x, y, 0, launcherToTargetAngle, isPNmode);
+            Missile missile = new Missile(x, y, 0, launcherToTargetAngle, navigationMode);
             synchronized (missiles) {
                 missiles.add(missile);
             }
@@ -79,11 +79,17 @@ public class MissileLauncher {
     }
 
     public void setMissileMode() {
-        this.isPNmode = !this.isPNmode;
+        if (navigationMode == "PPN") {
+            navigationMode = "PN";
+        } else if (navigationMode == "PN") {
+            navigationMode = "MPN";
+        } else if (navigationMode == "MPN") {
+            navigationMode = "PPN";
+        }
     }
 
-    public boolean getMissileMode() {
-        return isPNmode;
+    public String getMissileMode() {
+        return navigationMode;
     }
 
     public void draw(Graphics g, double targetX, double targetY) {
