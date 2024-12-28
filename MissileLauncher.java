@@ -15,8 +15,10 @@ public class MissileLauncher {
     private double launcherToTargetAngle = 0;
     private List<Missile> missiles;
     private EmitterManager emitterManager; // EmitterManager のフィールド
+    private Player player;
 
-    public MissileLauncher(double x, double y, double launchSpeed, double reloadTime, EmitterManager emitterManager) {
+    public MissileLauncher(double x, double y, double launchSpeed, double reloadTime, EmitterManager emitterManager,
+            Player player) {
         this.x = x;
         this.y = y;
         this.isLoaded = false;
@@ -25,6 +27,7 @@ public class MissileLauncher {
         this.reloadTime = reloadTime;
         this.missiles = Collections.synchronizedList(new ArrayList<>()); // スレッドセーフなリストに変更
         this.emitterManager = emitterManager; // 初期化
+        this.player = player;
     }
 
     public void loadMissile() {
@@ -33,7 +36,8 @@ public class MissileLauncher {
 
     public void launchMissile() {
         if (isLoaded) {
-            Missile missile = new Missile(x, y, launchSpeed, launcherToTargetAngle, navigationMode, emitterManager);
+            Missile missile = new Missile(x, y, launchSpeed, launcherToTargetAngle, navigationMode, emitterManager,
+                    player);
             missiles.add(missile);
             System.out.println(
                     "Missile launched at angle " + String.format("%.2f", Math.toDegrees(launcherToTargetAngle)) +

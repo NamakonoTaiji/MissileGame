@@ -8,7 +8,7 @@ public class Flare implements Emitter {
     private double speed;
     private double angle;
     private int age = 0;
-    private final double LIFESPAN = 1500;
+    private final double LIFESPAN = 2000;
 
     public Flare(double x, double y, double speed, double angle) {
         this.x = x;
@@ -36,6 +36,11 @@ public class Flare implements Emitter {
 
     public boolean isExpired() {
         return age >= LIFESPAN;
+    }
+
+    @Override
+    public String getSourceType() {
+        return "Flare";
     }
 
     @Override

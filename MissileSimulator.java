@@ -33,7 +33,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         player = new Player(200.0, 200.0, 0.4, 0.003, emitterManager); // EmitterManagerを渡す
         emitterManager.addEmitter(player);
 
-        missileLauncher = new MissileLauncher(150, 150, 0.0, 30, emitterManager);
+        missileLauncher = new MissileLauncher(150, 150, 0.0, 30, emitterManager, player);
         flareManager = new FlareManager(emitterManager); // FlareManagerの初期化時にEmitterManagerを渡す
 
         timer = new Timer();

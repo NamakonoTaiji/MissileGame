@@ -14,11 +14,12 @@ public class Missile {
     private double angleDifference;
     private EmitterManager emitterManager;
 
+    private double playerIRSensitivity = 1.0;
     private double missileMaxTurnRate = 0.003;
     private int burnTimeOfBooster = 800;
     private double deltaVOfBooster = 0.0026;
     private double airResistance = 0.9991;
-    private double seekerFOV = Math.toRadians(1);
+    private double seekerFOV = Math.toRadians(5);
     private double seekerAngle;
     private int lifeSpan = 2000;
     private int age = 0;
@@ -32,9 +33,10 @@ public class Missile {
 
     private final int TRAIL_LENGTH = 200; // 軌跡の長さ
     private Queue<Point> trail; // 軌跡を保存するキュー
+    private Player player;
 
     public Missile(double x, double y, double speed, double angle, String navigationMode,
-            EmitterManager emitterManager) {
+            EmitterManager emitterManager, Player player) {
         this.x = x;
         this.y = y;
         this.speed = speed;
@@ -44,6 +46,7 @@ public class Missile {
         this.oldAngle = angle;
         this.emitterManager = emitterManager;
         this.trail = new LinkedList<>();
+        this.player = player;
     }
 
     public void update() {
@@ -51,18 +54,28 @@ public class Missile {
         double weightedSumX = 0;
         double weightedSumY = 0;
         double totalWeight = 0;
-        double sumX = 0;
-        double sumY = 0;
-        int count = 0;
 
         for (Emitter emitter : emitters) {
             double emitterX = emitter.getX();
             double emitterY = emitter.getY();
+            double emitterDistance = Math.sqrt((Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2)));
             double emitterLOSAngle = Math.atan2(emitterY - y, emitterX - x); // ミサイルを起点とする視線角度に修正
             double angleDifferenceToEmitter = (seekerAngle - emitterLOSAngle + PI * 3) % (PI * 2) - PI; // 首振り角 - 熱源LOS角
-            double infraredEmission = emitter.getInfraredEmission();
+            double infraredEmission = emitter.getInfraredEmission(); // 赤外線強度
+            String sourceType = emitter.getSourceType();
+
+            if (sourceType.equals("Player")) {
+                double playerAngle = player.getAngle();
+                infraredEmission *= 100 / emitterDistance; // 距離が遠いほど熱源が小さく見える
+                infraredEmission *= playerIRSensitivity; // シーカーのプレイヤーとフレアの識別性能を実装
+                infraredEmission /= MathUtils.clamp(Math.abs((seekerAngle - playerAngle + PI * 3) % (PI * 2) - PI), 0.5,
+                        2) / 1.5; // 後方排気を捉えると強く熱源を認識する
+            } else if (sourceType.equals("Flare")) {
+                infraredEmission *= 130 / emitterDistance;
+            }
             boolean isCloseEmitter = Math.sqrt(Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2)) < 80; // 熱源に近いかどうか
             boolean isCloseAngle = Math.abs(angleDifferenceToEmitter) <= seekerFOV + Math.toRadians(0); // 熱源に視野角が近いかどうか
+
             if (Math.abs(angleDifferenceToEmitter) <= seekerFOV || (isCloseEmitter && isCloseAngle)) {
                 // より大きい熱源に吸われる
                 weightedSumX += emitterX * infraredEmission;
@@ -112,7 +125,7 @@ public class Missile {
         // ブースター燃焼中は加速
         if (age <= burnTimeOfBooster) {
             speed += deltaVOfBooster;
-            speed *= (1 - Math.abs(angleDifference) * 1.0); // 旋回による減速
+            speed *= (1 - Math.abs(angleDifference) * 1.0); // 旋回による運動エネルギーの消費
         }
 
         // 空気抵抗による減速

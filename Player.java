@@ -8,7 +8,7 @@ public class Player implements Emitter {
     private double angle;
     private double speed;
     private double maxTurnRate;
-    private double infraredEmission = 1.1;
+    private double infraredEmission = 1.0;
     private boolean upPressed;
     private boolean leftPressed;
     private boolean rightPressed;
@@ -89,6 +89,11 @@ public class Player implements Emitter {
 
     public double getAngle() {
         return angle;
+    }
+
+    @Override
+    public String getSourceType() {
+        return "Player";
     }
 
     @Override
