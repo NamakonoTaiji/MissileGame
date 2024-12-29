@@ -135,10 +135,10 @@ public class MissileSimulator extends JPanel implements KeyListener {
                 player.setZPressed(true);
                 break;
             case KeyEvent.VK_1:
-                scale -= 0.1;
+                scale *= 0.9;
                 break;
             case KeyEvent.VK_2:
-                scale += 0.1;
+                scale *= 1.1;
                 break;
         }
     }

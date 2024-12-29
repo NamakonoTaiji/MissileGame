@@ -13,12 +13,12 @@ public class Missile {
     private double angleDifference;
     private EmitterManager emitterManager;
 
-    private double playerIRSensitivity = 1.0;
-    private double missileMaxTurnRate = 0.0028;
+    private double playerIRSensitivity = 0.3;
+    private double missileMaxTurnRate = 0.0031;
     private int burnTimeOfBooster = 1300;
-    private double deltaVOfBooster = 0.0020;
+    private double deltaVOfBooster = 0.0029;
     private double airResistance = 0.9995;
-    private double IRCCMSeekerFOV = Math.toRadians(0.5);
+    private double IRCCMSeekerFOV = Math.toRadians(5);
     private double normalSeekerFOV = Math.toRadians(5);
     private double seekerFOV;
     private double seekerAngle;
@@ -70,12 +70,12 @@ public class Missile {
 
             if (sourceType.equals("Player")) {
                 double playerAngle = player.getAngle();
-                infraredEmission /= emitterDistance * 0.8; // 距離が遠いほど熱源が小さく見える
+                infraredEmission /= emitterDistance * 0.5; // 距離が遠いほど熱源が小さく見える
                 infraredEmission *= playerIRSensitivity; // シーカーのプレイヤーとフレアの識別性能を実装
                 infraredEmission /= MathUtils.clamp(Math.abs(MathUtils.normalizeAngle(seekerAngle, playerAngle)), 0.4,
                         1.5) / 1.5; // 後方排気を捉えると強く熱源を認識する
             } else if (sourceType.equals("Flare")) {
-                infraredEmission /= emitterDistance * 0.8;
+                infraredEmission /= emitterDistance * 0.5;
             }
             if (Math.abs(angleDifferenceToEmitter) <= seekerFOV / 2) {
                 // より大きい熱源に吸われる
@@ -95,7 +95,7 @@ public class Missile {
             seekerAngle = targetAngle;
             seekerFOV = IRCCMSeekerFOV; // 視界に熱源がある場合はIRCCMの視野角を適応
         } else {
-            seekerFOV = normalSeekerFOV; // ない場合は捜査時視野角
+            seekerFOV = normalSeekerFOV; // ない場合は起動時視野角
         }
 
         // 角度の差を計算し、正規化
@@ -115,7 +115,7 @@ public class Missile {
             case "MPN": {
                 // 修正比例航法(MPN)
                 angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle);
-                angleDifference = angleDifference * 3 + MathUtils.normalizeAngle(targetAngle, angle) * 0.001;
+                angleDifference = angleDifference * 3 + MathUtils.normalizeAngle(targetAngle, angle) * 0.004;
                 oldAngle = targetAngle;
                 break;
             }
@@ -170,9 +170,9 @@ public class Missile {
         double fovRight = MathUtils.normalizeAngle(seekerAngle, seekerFOV / 2);
         g2d.setColor(new Color(255, 0, 0, 10));
         g2d.fillPolygon(
-                new int[] { (int) x, (int) (x + Math.cos(fovLeft) * 3000),
-                        (int) (x + Math.cos(fovRight) * 3000) },
-                new int[] { (int) y, (int) (y + Math.sin(fovLeft) * 3000), (int) (y + Math.sin(fovRight) * 3000) },
+                new int[] { (int) x, (int) (x + Math.cos(fovLeft) * 8000),
+                        (int) (x + Math.cos(fovRight) * 8000) },
+                new int[] { (int) y, (int) (y + Math.sin(fovLeft) * 8000), (int) (y + Math.sin(fovRight) * 8000) },
                 3);
         // g2d.fillArc((int) (x - 1500), (int) (y - 1500), 3000, 3000, (int) arcStart,
         // (int) arcExtent);

@@ -24,8 +24,11 @@ public class Player implements Emitter {
     private int imageWidth;
     private int imageHeight;
     private double scale;
-    private final double AIR_RESISTANCE = 0.999;
-    private final double ACCELERATION = 0.0008;
+    private final double ENGINE_POWER = 0.0012;
+    private final double MASS = 4;
+    private final double DRAG_COEFFICIENT = 0.05; // 抗力係数
+    private final double AIR_DENSITY = 1.225; // 空気密度(kg/m^2)
+    private final double CROSS_SECTIONAL_AREA = 30; // 物体の断面積
 
     public Player(double x, double y, double speed, double maxTurnRate, EmitterManager emitterManager, double scale) {
         this.x = x;
@@ -46,16 +49,18 @@ public class Player implements Emitter {
     }
 
     public void update() {
+        double acc = 0;
+        double turnDragCoefficient = 0;
         if (upPressed) {
-            speed += ACCELERATION;
+            acc = ENGINE_POWER / MASS; // エンジン稼働時加速度計算
         }
         if (leftPressed) {
             angle -= maxTurnRate;
-            speed *= (1 - maxTurnRate * 0.4);
+            turnDragCoefficient = 0.2; // 旋回時空力抵抗増加
         }
         if (rightPressed) {
             angle += maxTurnRate;
-            speed *= (1 - maxTurnRate * 0.4);
+            turnDragCoefficient = 0.2;
         }
 
         if (zPressed) {
@@ -66,8 +71,10 @@ public class Player implements Emitter {
         } else {
             isBeforeZPressed = false;
         }
-
-        speed *= AIR_RESISTANCE;
+        double dragForce = 0.5 * (DRAG_COEFFICIENT + turnDragCoefficient) * AIR_DENSITY * CROSS_SECTIONAL_AREA * speed
+                * speed * 0.001; // 空気抵抗計算
+        acc = -dragForce / MASS + acc; // 加速度計算
+        speed += acc; // 加速度を速度に反映
         x += Math.cos(angle) * speed;
         y += Math.sin(angle) * speed;
 
@@ -87,10 +94,6 @@ public class Player implements Emitter {
             int drawX = -imageWidth / 2;
             int drawY = -imageHeight / 2;
             g2d.drawImage(playerImage, drawX, drawY, imageWidth, imageHeight, null);
-
-            // 回転の中心に赤い点を描画
-            // g2d.setColor(Color.RED);
-            // g2d.fillOval(-3, -3, 6, 6);
         } else {
             g2d.setColor(Color.RED);
             g2d.translate((int) x, (int) y);
