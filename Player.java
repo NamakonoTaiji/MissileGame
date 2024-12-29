@@ -23,20 +23,21 @@ public class Player implements Emitter {
     private BufferedImage playerImage;
     private int imageWidth;
     private int imageHeight;
+    private double scale;
 
-    public Player(double x, double y, double speed, double maxTurnRate, EmitterManager emitterManager) {
+    public Player(double x, double y, double speed, double maxTurnRate, EmitterManager emitterManager, double scale) {
         this.x = x;
         this.y = y;
         this.speed = speed;
         this.maxTurnRate = maxTurnRate;
         this.angle = 0.0;
         this.flareManager = new FlareManager(emitterManager);
-
+        this.scale = scale;
         // 画像を読み込む
         try {
             playerImage = ImageIO.read(new File("images/F-2.png"));
-            imageWidth = playerImage.getWidth() / IMAGE_REDUCTION; // 縮小サイズを指定（例：1/4のサイズに縮小）
-            imageHeight = playerImage.getHeight() / IMAGE_REDUCTION;
+            imageWidth = (int) (playerImage.getWidth() / IMAGE_REDUCTION * scale); // 縮小サイズを指定（例：1/4のサイズに縮小）
+            imageHeight = (int) (playerImage.getHeight() / IMAGE_REDUCTION * scale);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -56,7 +57,7 @@ public class Player implements Emitter {
 
         if (zPressed) {
             if (!isBeforeZPressed) {
-                flareManager.addFlare(x, y, -0.5, angle);
+                flareManager.addFlare(x, y, 0.05, angle);
                 isBeforeZPressed = true;
             }
         } else {

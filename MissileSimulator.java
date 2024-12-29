@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.geom.AffineTransform;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Timer;
@@ -10,6 +11,7 @@ import java.util.TimerTask;
 public class MissileSimulator extends JPanel implements KeyListener {
     public static final int PANEL_WIDTH = 1600;
     public static final int PANEL_HEIGHT = 900;
+    private double scale = 1.0;
 
     private Player player;
     private MissileLauncher missileLauncher;
@@ -30,7 +32,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         emitterManager = new EmitterManager();
 
-        player = new Player(200.0, 200.0, 0.4, 0.003, emitterManager); // EmitterManagerを渡す
+        player = new Player(200.0, 200.0, 0.4, 0.003, emitterManager, scale); // EmitterManagerを渡す
         emitterManager.addEmitter(player);
 
         missileLauncher = new MissileLauncher(150, 150, 0.0, 30, emitterManager, player);
@@ -105,12 +107,18 @@ public class MissileSimulator extends JPanel implements KeyListener {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
+        AffineTransform originalTransform = g2d.getTransform();
+
+        // スケールを適用
+        g2d.scale(scale, scale);
 
         g.setColor(new Color(170, 170, 170));
         g.fillRect(0, 0, this.getWidth(), this.getHeight());
 
         player.draw(g2d);
         missileLauncher.draw(g2d, player.getX(), player.getY());
+
+        g2d.setTransform(originalTransform);
 
         g.setColor(Color.GRAY);
         coordinatesLabel.setText(String.format("Coordinates: (%.2f, %.2f)", player.getX(), player.getY()));

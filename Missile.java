@@ -14,12 +14,12 @@ public class Missile {
     private double angleDifference;
     private EmitterManager emitterManager;
 
-    private double playerIRSensitivity = 1.1;
+    private double playerIRSensitivity = 1.0;
     private double missileMaxTurnRate = 0.003;
-    private int burnTimeOfBooster = 800;
-    private double deltaVOfBooster = 0.0026;
-    private double airResistance = 0.9991;
-    private double seekerFOV = Math.toRadians(1);
+    private int burnTimeOfBooster = 700;
+    private double deltaVOfBooster = 0.0022;
+    private double airResistance = 0.9995;
+    private double seekerFOV = Math.toRadians(5);
     private double seekerAngle;
     private final int LIFESPAN = 2000;
 
@@ -67,17 +67,14 @@ public class Missile {
 
             if (sourceType.equals("Player")) {
                 double playerAngle = player.getAngle();
-                infraredEmission *= 100 / emitterDistance; // 距離が遠いほど熱源が小さく見える
+                infraredEmission /= emitterDistance; // 距離が遠いほど熱源が小さく見える
                 infraredEmission *= playerIRSensitivity; // シーカーのプレイヤーとフレアの識別性能を実装
-                infraredEmission /= MathUtils.clamp(Math.abs((seekerAngle - playerAngle + PI * 3) % (PI * 2) - PI), 0.6,
-                        1.8) / 1.5; // 後方排気を捉えると強く熱源を認識する
+                infraredEmission /= MathUtils.clamp(Math.abs((seekerAngle - playerAngle + PI * 3) % (PI * 2) - PI), 0.3,
+                        1.5) / 1.5; // 後方排気を捉えると強く熱源を認識する
             } else if (sourceType.equals("Flare")) {
-                infraredEmission *= 130 / emitterDistance;
+                infraredEmission /= emitterDistance;
             }
-            boolean isCloseEmitter = Math.sqrt(Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2)) < 80; // 熱源に近いかどうか
-            boolean isCloseAngle = Math.abs(angleDifferenceToEmitter) <= seekerFOV + Math.toRadians(0); // 熱源に視野角が近いかどうか
-
-            if (Math.abs(angleDifferenceToEmitter) <= seekerFOV || (isCloseEmitter && isCloseAngle)) {
+            if (Math.abs(angleDifferenceToEmitter) <= seekerFOV) {
                 // より大きい熱源に吸われる
                 weightedSumX += emitterX * infraredEmission;
                 weightedSumY += emitterY * infraredEmission;
@@ -126,9 +123,8 @@ public class Missile {
         // ブースター燃焼中は加速
         if (age <= burnTimeOfBooster) {
             speed += deltaVOfBooster;
-            speed *= (1 - Math.abs(angleDifference) * 1.0); // 旋回による運動エネルギーの消費
         }
-
+        speed *= (1 - Math.abs(angleDifference) * 0.4); // 旋回による運動エネルギーの消費
         // 空気抵抗による減速
         speed = speed * airResistance;
 
@@ -166,10 +162,16 @@ public class Missile {
         g2d.drawOval((int) debugX - 5, (int) debugY - 5, 10, 10);
 
         // 視野角の範囲を描画（半透明の扇形）
-        double arcStart = Math.toDegrees(((seekerFOV / 2 - seekerAngle) + PI * 3) % (PI * 2) - PI);
-        double arcExtent = Math.toDegrees(-seekerFOV);
+        double fovLeft = (((seekerAngle + seekerFOV / 2) + PI * 3) % (PI * 2) - PI);
+        double fovRight = (((seekerAngle - seekerFOV / 2) + PI * 3) % (PI * 2) - PI);
         g2d.setColor(new Color(255, 0, 0, 10));
-        g2d.fillArc((int) (x - 1500), (int) (y - 1500), 3000, 3000, (int) arcStart, (int) arcExtent);
+        g2d.fillPolygon(
+                new int[] { (int) x, (int) (x + Math.cos(fovLeft) * 3000),
+                        (int) (x + Math.cos(fovRight) * 3000) },
+                new int[] { (int) y, (int) (y + Math.sin(fovLeft) * 3000), (int) (y + Math.sin(fovRight) * 3000) },
+                3);
+        // g2d.fillArc((int) (x - 1500), (int) (y - 1500), 3000, 3000, (int) arcStart,
+        // (int) arcExtent);
     }
 
     public boolean isExpired() {

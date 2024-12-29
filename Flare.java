@@ -2,7 +2,7 @@ import java.awt.*;
 
 public class Flare implements Emitter {
     private double infraredEmission = 1.0;
-    private double airResistance = 0.95;
+    private double airResistance = 0.995;
     private double x;
     private double y;
     private double speed;

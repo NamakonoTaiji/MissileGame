@@ -17,7 +17,6 @@ public class FlareManager {
         Flare flare = new Flare(x, y, speed, angle);
         flares.add(flare);
         emitterManager.addEmitter(flare);
-        System.out.println("Flare added: (" + x + ", " + y + ") with emission: " + flare.getInfraredEmission());
     }
 
     public void updateFlares() {
@@ -30,7 +29,6 @@ public class FlareManager {
                 if (flare.isExpired()) {
                     flareIterator.remove();
                     emitterManager.removeEmitter(flare);
-                    System.out.println("Flare and corresponding InfraredEmission removed");
                 }
             }
         }
