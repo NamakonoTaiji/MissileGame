@@ -36,7 +36,7 @@ public class Player implements Emitter {
         // 画像を読み込む
         try {
             playerImage = ImageIO.read(new File("images/F-2.png"));
-            imageWidth = (int) (playerImage.getWidth() / IMAGE_REDUCTION * scale); // 縮小サイズを指定（例：1/4のサイズに縮小）
+            imageWidth = (int) (playerImage.getWidth() / IMAGE_REDUCTION * scale); // 縮小サイズを指定
             imageHeight = (int) (playerImage.getHeight() / IMAGE_REDUCTION * scale);
         } catch (IOException e) {
             e.printStackTrace();
@@ -63,16 +63,16 @@ public class Player implements Emitter {
         } else {
             isBeforeZPressed = false;
         }
-
-        if (x < ARROW_SIZE)
-            x = ARROW_SIZE;
-        if (x > MissileSimulator.PANEL_WIDTH - ARROW_SIZE)
-            x = MissileSimulator.PANEL_WIDTH - ARROW_SIZE;
-        if (y < ARROW_SIZE)
-            y = ARROW_SIZE;
-        if (y > MissileSimulator.PANEL_HEIGHT - ARROW_SIZE)
-            y = MissileSimulator.PANEL_HEIGHT - ARROW_SIZE;
-
+        /*
+         * if (x < ARROW_SIZE)
+         * x = ARROW_SIZE;
+         * if (x > MissileSimulator.PANEL_WIDTH - ARROW_SIZE)
+         * x = MissileSimulator.PANEL_WIDTH - ARROW_SIZE;
+         * if (y < ARROW_SIZE)
+         * y = ARROW_SIZE;
+         * if (y > MissileSimulator.PANEL_HEIGHT - ARROW_SIZE)
+         * y = MissileSimulator.PANEL_HEIGHT - ARROW_SIZE;
+         */
         flareManager.updateFlares();
     }
 
@@ -80,14 +80,11 @@ public class Player implements Emitter {
         AffineTransform originalTransform = g2d.getTransform();
 
         if (playerImage != null) {
-            AffineTransform transform = new AffineTransform();
+            g2d.setColor(Color.YELLOW);
             // プレイヤーの中心に移動
-            transform.translate(x, y);
-
+            g2d.translate(x, y);
             // 画像の中心を基準に回転
-            transform.rotate(angle);
-            g2d.setTransform(transform);
-
+            g2d.rotate(angle);
             // 画像の縮小
             int drawX = -imageWidth / 2;
             int drawY = -imageHeight / 2;

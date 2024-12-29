@@ -19,7 +19,7 @@ public class Missile {
     private int burnTimeOfBooster = 700;
     private double deltaVOfBooster = 0.0022;
     private double airResistance = 0.9995;
-    private double seekerFOV = Math.toRadians(5);
+    private double seekerFOV = Math.toRadians(1);
     private double seekerAngle;
     private final int LIFESPAN = 2000;
 
@@ -61,7 +61,7 @@ public class Missile {
             double emitterY = emitter.getY();
             double emitterDistance = Math.sqrt((Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2)));
             double emitterLOSAngle = Math.atan2(emitterY - y, emitterX - x); // ミサイルを起点とする視線角度に修正
-            double angleDifferenceToEmitter = (seekerAngle - emitterLOSAngle + PI * 3) % (PI * 2) - PI; // 首振り角 - 熱源LOS角
+            double angleDifferenceToEmitter = MathUtils.normalizeAngle(seekerAngle, emitterLOSAngle); // 首振り角 - 熱源LOS角
             double infraredEmission = emitter.getInfraredEmission(); // 赤外線強度
             String sourceType = emitter.getSourceType();
 
@@ -69,7 +69,7 @@ public class Missile {
                 double playerAngle = player.getAngle();
                 infraredEmission /= emitterDistance; // 距離が遠いほど熱源が小さく見える
                 infraredEmission *= playerIRSensitivity; // シーカーのプレイヤーとフレアの識別性能を実装
-                infraredEmission /= MathUtils.clamp(Math.abs((seekerAngle - playerAngle + PI * 3) % (PI * 2) - PI), 0.3,
+                infraredEmission /= MathUtils.clamp(Math.abs(MathUtils.normalizeAngle(seekerAngle, playerAngle)), 0.3,
                         1.5) / 1.5; // 後方排気を捉えると強く熱源を認識する
             } else if (sourceType.equals("Flare")) {
                 infraredEmission /= emitterDistance;
@@ -98,20 +98,20 @@ public class Missile {
         switch (navigationMode) {
             case "PPN": {
                 // 単追尾(PPN)
-                angleDifference = (targetAngle - angle + PI * 3) % (PI * 2) - PI;
+                angleDifference = MathUtils.normalizeAngle(targetAngle, angle);
                 break;
             }
             case "PN": {
                 // 比例航法(PN)
-                angleDifference = (targetAngle - oldAngle + PI * 3) % (PI * 2) - PI;
+                angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle);
                 angleDifference = angleDifference * 3;
                 oldAngle = targetAngle;
                 break;
             }
             case "MPN": {
                 // 修正比例航法(MPN)
-                angleDifference = (targetAngle - oldAngle + PI * 3) % (PI * 2) - PI;
-                angleDifference = angleDifference * 3 + ((targetAngle - angle + PI * 3) % (PI * 2) - PI) * 0.001;
+                angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle);
+                angleDifference = angleDifference * 3 + MathUtils.normalizeAngle(targetAngle, angle) * 0.001;
                 oldAngle = targetAngle;
                 break;
             }
@@ -136,7 +136,7 @@ public class Missile {
         if (trail.size() >= TRAIL_LENGTH) {
             trail.poll(); // 古いポイントを削除
         }
-        if (age <= burnTimeOfBooster) {
+        if (age <= burnTimeOfBooster && age % 5 == 0) {
             trail.add(new Point((int) x, (int) y));
         }
         // ミサイルの寿命を更新
@@ -147,23 +147,23 @@ public class Missile {
         Graphics2D g2d = (Graphics2D) g;
 
         // 軌跡を描画
-        g2d.setColor(Color.GRAY);
+        g2d.setColor(new Color(255, 255, 255, 90));
         for (Point point : trail) {
-            g2d.fillOval(point.x - 1, point.y - 1, 2, 2);
+            g2d.fillOval(point.x - 2, point.y - 2, 4, 4);
         }
         // ミサイル自体を描画
         g2d.setColor(Color.BLUE);
-        g2d.drawOval((int) (x - 2.5), (int) (y - 2.5), 5, 5);
-        g.drawLine((int) x, (int) y, (int) ((x) + 10 * Math.cos(angle)),
-                (int) ((y) + 10 * Math.sin(angle)));
+        g2d.drawOval((int) (x - 1.5), (int) (y - 1.5), 3, 3);
+        g.drawLine((int) x, (int) y, (int) ((x) + 5 * Math.cos(angle)),
+                (int) ((y) + 5 * Math.sin(angle)));
 
         // シーカーの視点
         g2d.setColor(Color.BLACK);
-        g2d.drawOval((int) debugX - 5, (int) debugY - 5, 10, 10);
+        g2d.drawOval((int) debugX - 3, (int) debugY - 3, 6, 6);
 
         // 視野角の範囲を描画（半透明の扇形）
-        double fovLeft = (((seekerAngle + seekerFOV / 2) + PI * 3) % (PI * 2) - PI);
-        double fovRight = (((seekerAngle - seekerFOV / 2) + PI * 3) % (PI * 2) - PI);
+        double fovLeft = MathUtils.normalizeAngle(seekerAngle, -seekerFOV / 2);
+        double fovRight = MathUtils.normalizeAngle(seekerAngle, seekerFOV / 2);
         g2d.setColor(new Color(255, 0, 0, 10));
         g2d.fillPolygon(
                 new int[] { (int) x, (int) (x + Math.cos(fovLeft) * 3000),

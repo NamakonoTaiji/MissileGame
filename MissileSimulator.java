@@ -9,8 +9,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class MissileSimulator extends JPanel implements KeyListener {
-    public static final int PANEL_WIDTH = 1600;
-    public static final int PANEL_HEIGHT = 900;
+    public static final int PANEL_WIDTH = 1920;
+    public static final int PANEL_HEIGHT = 1080;
     private double scale = 1.0;
 
     private Player player;
@@ -112,8 +112,13 @@ public class MissileSimulator extends JPanel implements KeyListener {
         // スケールを適用
         g2d.scale(scale, scale);
 
-        g.setColor(new Color(170, 170, 170));
-        g.fillRect(0, 0, this.getWidth(), this.getHeight());
+        // プレイヤーを画面の中央に配置
+        double offsetX = (getWidth() / 2.0) / scale - player.getX();
+        double offsetY = (getHeight() / 2.0) / scale - player.getY();
+        g2d.translate(offsetX, offsetY);
+
+        g.setColor(new Color(200, 200, 200));
+        g.fillRect(this.getWidth() * -10, this.getHeight() * -10, this.getWidth() * 20, this.getHeight() * 20);
 
         player.draw(g2d);
         missileLauncher.draw(g2d, player.getX(), player.getY());
@@ -150,6 +155,12 @@ public class MissileSimulator extends JPanel implements KeyListener {
                 break;
             case KeyEvent.VK_Z:
                 player.setZPressed(true);
+                break;
+            case KeyEvent.VK_1:
+                scale -= 0.1;
+                break;
+            case KeyEvent.VK_2:
+                scale += 0.1;
                 break;
         }
     }
