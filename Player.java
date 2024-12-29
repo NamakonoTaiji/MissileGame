@@ -1,5 +1,9 @@
 import java.awt.*;
 import java.awt.geom.AffineTransform;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.io.File;
+import javax.imageio.ImageIO;
 
 public class Player implements Emitter {
     private static final int ARROW_SIZE = 6;
@@ -15,6 +19,7 @@ public class Player implements Emitter {
     private boolean isBeforeZPressed = false;
     private boolean zPressed;
     private FlareManager flareManager;
+    private BufferedImage playerImage;
 
     public Player(double x, double y, double speed, double maxTurnRate, EmitterManager emitterManager) {
         this.x = x;
@@ -23,6 +28,13 @@ public class Player implements Emitter {
         this.maxTurnRate = maxTurnRate;
         this.angle = 0.0;
         this.flareManager = new FlareManager(emitterManager);
+
+        // 画像を読み込む
+        try {
+            playerImage = ImageIO.read(new File("images/F-2.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void update() {
@@ -60,15 +72,21 @@ public class Player implements Emitter {
 
     public void draw(Graphics2D g2d) {
         AffineTransform originalTransform = g2d.getTransform();
+        g2d.rotate(angle);
+        if (playerImage != null) {
+            // 画像の中心をプレイヤーの座標に合わせて描画
+            g2d.drawImage(playerImage, (int) (x - playerImage.getWidth() / 2), (int) (y - playerImage.getHeight() / 2),
+                    null);
+        } else {
+
+        }
         g2d.setColor(Color.RED);
         g2d.translate((int) x, (int) y);
-        g2d.rotate(angle);
         g2d.fillPolygon(new int[] { -ARROW_SIZE, ARROW_SIZE, -ARROW_SIZE },
                 new int[] { -ARROW_SIZE / 2, 0, ARROW_SIZE / 2 }, 3);
         g2d.setTransform(originalTransform);
         g2d.drawOval((int) (x - ARROW_SIZE), (int) (y - ARROW_SIZE), ARROW_SIZE * 2, ARROW_SIZE * 2);
         flareManager.drawFlares(g2d);
-        // System.out.println(flareManager.getFlareSize());
     }
 
     public void setUpPressed(boolean upPressed) {

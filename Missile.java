@@ -14,14 +14,15 @@ public class Missile {
     private double angleDifference;
     private EmitterManager emitterManager;
 
-    private double playerIRSensitivity = 1.0;
+    private double playerIRSensitivity = 1.1;
     private double missileMaxTurnRate = 0.003;
     private int burnTimeOfBooster = 800;
     private double deltaVOfBooster = 0.0026;
     private double airResistance = 0.9991;
-    private double seekerFOV = Math.toRadians(5);
+    private double seekerFOV = Math.toRadians(1);
     private double seekerAngle;
-    private int lifeSpan = 2000;
+    private final int LIFESPAN = 2000;
+
     private int age = 0;
     private double targetX = 0;
     private double targetY = 0;
@@ -68,8 +69,8 @@ public class Missile {
                 double playerAngle = player.getAngle();
                 infraredEmission *= 100 / emitterDistance; // 距離が遠いほど熱源が小さく見える
                 infraredEmission *= playerIRSensitivity; // シーカーのプレイヤーとフレアの識別性能を実装
-                infraredEmission /= MathUtils.clamp(Math.abs((seekerAngle - playerAngle + PI * 3) % (PI * 2) - PI), 0.5,
-                        2) / 1.5; // 後方排気を捉えると強く熱源を認識する
+                infraredEmission /= MathUtils.clamp(Math.abs((seekerAngle - playerAngle + PI * 3) % (PI * 2) - PI), 0.6,
+                        1.8) / 1.5; // 後方排気を捉えると強く熱源を認識する
             } else if (sourceType.equals("Flare")) {
                 infraredEmission *= 130 / emitterDistance;
             }
@@ -172,7 +173,7 @@ public class Missile {
     }
 
     public boolean isExpired() {
-        return age >= lifeSpan;
+        return age >= LIFESPAN;
     }
 
     // ゲッターメソッド
