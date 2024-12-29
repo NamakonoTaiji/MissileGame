@@ -7,6 +7,7 @@ import javax.imageio.ImageIO;
 
 public class Player implements Emitter {
     private static final int ARROW_SIZE = 6;
+    private static final int IMAGE_REDUCTION = 20;
     private double x;
     private double y;
     private double angle;
@@ -20,6 +21,8 @@ public class Player implements Emitter {
     private boolean zPressed;
     private FlareManager flareManager;
     private BufferedImage playerImage;
+    private int imageWidth;
+    private int imageHeight;
 
     public Player(double x, double y, double speed, double maxTurnRate, EmitterManager emitterManager) {
         this.x = x;
@@ -32,6 +35,8 @@ public class Player implements Emitter {
         // 画像を読み込む
         try {
             playerImage = ImageIO.read(new File("images/F-2.png"));
+            imageWidth = playerImage.getWidth() / IMAGE_REDUCTION; // 縮小サイズを指定（例：1/4のサイズに縮小）
+            imageHeight = playerImage.getHeight() / IMAGE_REDUCTION;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -72,20 +77,34 @@ public class Player implements Emitter {
 
     public void draw(Graphics2D g2d) {
         AffineTransform originalTransform = g2d.getTransform();
-        g2d.rotate(angle);
-        if (playerImage != null) {
-            // 画像の中心をプレイヤーの座標に合わせて描画
-            g2d.drawImage(playerImage, (int) (x - playerImage.getWidth() / 2), (int) (y - playerImage.getHeight() / 2),
-                    null);
-        } else {
 
+        if (playerImage != null) {
+            AffineTransform transform = new AffineTransform();
+            // プレイヤーの中心に移動
+            transform.translate(x, y);
+
+            // 画像の中心を基準に回転
+            transform.rotate(angle);
+            g2d.setTransform(transform);
+
+            // 画像の縮小
+            int drawX = -imageWidth / 2;
+            int drawY = -imageHeight / 2;
+            g2d.drawImage(playerImage, drawX, drawY, imageWidth, imageHeight, null);
+
+            // 回転の中心に赤い点を描画
+            // g2d.setColor(Color.RED);
+            // g2d.fillOval(-3, -3, 6, 6);
+        } else {
+            g2d.setColor(Color.RED);
+            g2d.translate((int) x, (int) y);
+            g2d.rotate(angle);
+            g2d.fillPolygon(new int[] { -ARROW_SIZE, ARROW_SIZE, -ARROW_SIZE },
+                    new int[] { -ARROW_SIZE / 2, 0, ARROW_SIZE / 2 }, 3);
         }
-        g2d.setColor(Color.RED);
-        g2d.translate((int) x, (int) y);
-        g2d.fillPolygon(new int[] { -ARROW_SIZE, ARROW_SIZE, -ARROW_SIZE },
-                new int[] { -ARROW_SIZE / 2, 0, ARROW_SIZE / 2 }, 3);
         g2d.setTransform(originalTransform);
-        g2d.drawOval((int) (x - ARROW_SIZE), (int) (y - ARROW_SIZE), ARROW_SIZE * 2, ARROW_SIZE * 2);
+
+        // フレアを描画
         flareManager.drawFlares(g2d);
     }
 
