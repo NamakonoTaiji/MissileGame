@@ -17,12 +17,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
     private MissileLauncher missileLauncher;
     private EmitterManager emitterManager;
     private FlareManager flareManager;
-
-    private JLabel coordinatesLabel;
-    private JLabel angleLabel;
-    private JLabel memoryLabel;
-    private JLabel missileModeLabel;
-    private JLabel debugLabel;
+    private LabelManager labelManager;
 
     private Timer timer;
 
@@ -38,6 +33,15 @@ public class MissileSimulator extends JPanel implements KeyListener {
         missileLauncher = new MissileLauncher(150, 150, 0.0, 30, emitterManager, player);
         flareManager = new FlareManager(emitterManager); // FlareManagerの初期化時にEmitterManagerを渡す
 
+        labelManager = new LabelManager(this);
+
+        // ラベルの追加（座標やサイズを変更）
+        labelManager.addLabel("Coordinates: ", 10, 10, 300, 30);
+        labelManager.addLabel("Angle: ", 10, 50, 200, 30);
+        labelManager.addLabel("Memory Usage: ", 10, 90, 300, 30);
+        labelManager.addLabel("Navigation: ", 10, 130, 300, 30);
+        labelManager.addLabel("Debug: ", 10, 170, 900, 30);
+
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -46,34 +50,6 @@ public class MissileSimulator extends JPanel implements KeyListener {
                 repaint();
             }
         }, 0, 3);
-
-        // ラベルの作成
-        coordinatesLabel = new JLabel();
-        coordinatesLabel.setFont(new Font("Serif", Font.PLAIN, 18));
-        coordinatesLabel.setBounds(10, 10, 300, 30);
-        add(coordinatesLabel);
-
-        angleLabel = new JLabel();
-        angleLabel.setFont(new Font("Serif", Font.PLAIN, 18));
-        angleLabel.setBounds(10, 30, 200, 30);
-        add(angleLabel);
-
-        memoryLabel = new JLabel();
-        memoryLabel.setFont(new Font("Serif", Font.PLAIN, 18));
-        memoryLabel.setBounds(10, 50, 300, 30);
-        add(memoryLabel);
-
-        missileModeLabel = new JLabel();
-        missileModeLabel.setFont(new Font("Serif", Font.PLAIN, 18));
-        missileModeLabel.setBounds(10, 70, 300, 30);
-        add(missileModeLabel);
-
-        debugLabel = new JLabel();
-        debugLabel.setFont(new Font("Serif", Font.PLAIN, 18));
-        debugLabel.setBounds(10, 90, 900, 30);
-        add(debugLabel);
-
-        setLayout(null);
     }
 
     public void update() {
@@ -96,7 +72,9 @@ public class MissileSimulator extends JPanel implements KeyListener {
                 double distance = Math.sqrt(
                         Math.pow(missile.getX() - player.getX(), 2) + Math.pow(missile.getY() - player.getY(), 2));
                 if (distance < hitRadius + missileHitRadius) {
-                    System.out.println("Hit detected!");
+                    String message = "Hit detected! Missile at (" + missile.getX() + ", " + missile.getY() + ")";
+                    System.out.println(message);
+                    labelManager.addLogMessage(message);
                     iterator.remove();
                 }
             }
@@ -125,13 +103,13 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         g2d.setTransform(originalTransform);
 
-        g.setColor(Color.GRAY);
-        coordinatesLabel.setText(String.format("Coordinates: (%.2f, %.2f)", player.getX(), player.getY()));
+        // ラベルの更新
+        labelManager.updateLabel(0, String.format("Coordinates: (%.2f, %.2f)", player.getX(), player.getY()));
         double launcherToTargetAngle = missileLauncher.getLauncherToTargetAngle();
-        angleLabel.setText(String.format("Angle: %.2f", Math.toDegrees(launcherToTargetAngle)));
-        memoryLabel.setText(String.format("Memory Usage: %,d KB", getMemoryUsage()));
-        missileModeLabel.setText(String.format("Navigation: " + missileLauncher.getMissileMode()));
-        debugLabel.setText(String.format("Emitters: " + emitterManager.getEmitters().size()));
+        labelManager.updateLabel(1, String.format("Angle: %.2f", Math.toDegrees(launcherToTargetAngle)));
+        labelManager.updateLabel(2, String.format("Memory Usage: %,d KB", getMemoryUsage()));
+        labelManager.updateLabel(3, String.format("Navigation: " + missileLauncher.getMissileMode()));
+        labelManager.updateLabel(4, String.format("Debug: Emitters: " + emitterManager.getEmitters().size()));
     }
 
     @Override
@@ -197,7 +175,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         JFrame frame = new JFrame("Missile Simulator");
         MissileSimulator simulator = new MissileSimulator();
         frame.add(simulator);
-        frame.setSize(PANEL_WIDTH, PANEL_HEIGHT);
+        frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
     }

@@ -78,7 +78,7 @@ public class Player implements Emitter {
 
     public void draw(Graphics2D g2d) {
         AffineTransform originalTransform = g2d.getTransform();
-
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         if (playerImage != null) {
             g2d.setColor(Color.YELLOW);
             // プレイヤーの中心に移動

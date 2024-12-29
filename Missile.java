@@ -16,19 +16,17 @@ public class Missile {
 
     private double playerIRSensitivity = 1.0;
     private double missileMaxTurnRate = 0.003;
-    private int burnTimeOfBooster = 700;
-    private double deltaVOfBooster = 0.0022;
+    private int burnTimeOfBooster = 900;
+    private double deltaVOfBooster = 0.0020;
     private double airResistance = 0.9995;
-    private double seekerFOV = Math.toRadians(1);
+    private double seekerFOV = Math.toRadians(5);
     private double seekerAngle;
-    private final int LIFESPAN = 2000;
+    private final int LIFESPAN = 2700;
 
     private int age = 0;
     private double targetX = 0;
     private double targetY = 0;
     private double targetAngle = 0;
-    private double debugX = 0;
-    private double debugY = 0;
 
     private String navigationMode;
 
@@ -40,8 +38,11 @@ public class Missile {
             EmitterManager emitterManager, Player player) {
         this.x = x;
         this.y = y;
+        this.targetX = x;
+        this.targetY = y;
         this.speed = speed;
         this.angle = angle;
+        this.targetAngle = angle;
         this.navigationMode = navigationMode;
         this.seekerAngle = angle;
         this.oldAngle = angle;
@@ -69,7 +70,7 @@ public class Missile {
                 double playerAngle = player.getAngle();
                 infraredEmission /= emitterDistance; // 距離が遠いほど熱源が小さく見える
                 infraredEmission *= playerIRSensitivity; // シーカーのプレイヤーとフレアの識別性能を実装
-                infraredEmission /= MathUtils.clamp(Math.abs(MathUtils.normalizeAngle(seekerAngle, playerAngle)), 0.3,
+                infraredEmission /= MathUtils.clamp(Math.abs(MathUtils.normalizeAngle(seekerAngle, playerAngle)), 0.2,
                         1.5) / 1.5; // 後方排気を捉えると強く熱源を認識する
             } else if (sourceType.equals("Flare")) {
                 infraredEmission /= emitterDistance;
@@ -90,9 +91,6 @@ public class Missile {
             targetAngle = Math.atan2(deltaY, deltaX);
             seekerAngle = targetAngle;
         }
-
-        debugX = targetX;
-        debugY = targetY;
 
         // 角度の差を計算し、正規化
         switch (navigationMode) {
@@ -159,7 +157,7 @@ public class Missile {
 
         // シーカーの視点
         g2d.setColor(Color.BLACK);
-        g2d.drawOval((int) debugX - 3, (int) debugY - 3, 6, 6);
+        g2d.drawOval((int) targetX - 3, (int) targetY - 3, 6, 6);
 
         // 視野角の範囲を描画（半透明の扇形）
         double fovLeft = MathUtils.normalizeAngle(seekerAngle, -seekerFOV / 2);
