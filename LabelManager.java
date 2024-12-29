@@ -45,7 +45,8 @@ public class LabelManager {
     public void addLabel(String text, int x, int y, int width, int height) {
         JLabel label = new JLabel();
         label.setText(text);
-        label.setFont(new Font("Serif", Font.PLAIN, 18));
+        label.setFont(new Font("Serif", Font.PLAIN, 22));
+        label.setForeground(Color.BLACK);
         label.setBounds(x, y, width, height);
         labels.add(label);
         panel.add(label);

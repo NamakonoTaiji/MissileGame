@@ -24,6 +24,8 @@ public class Player implements Emitter {
     private int imageWidth;
     private int imageHeight;
     private double scale;
+    private final double AIR_RESISTANCE = 0.999;
+    private final double ACCELERATION = 0.0008;
 
     public Player(double x, double y, double speed, double maxTurnRate, EmitterManager emitterManager, double scale) {
         this.x = x;
@@ -45,14 +47,15 @@ public class Player implements Emitter {
 
     public void update() {
         if (upPressed) {
-            x += Math.cos(angle) * speed;
-            y += Math.sin(angle) * speed;
+            speed += ACCELERATION;
         }
         if (leftPressed) {
             angle -= maxTurnRate;
+            speed *= (1 - maxTurnRate * 0.4);
         }
         if (rightPressed) {
             angle += maxTurnRate;
+            speed *= (1 - maxTurnRate * 0.4);
         }
 
         if (zPressed) {
@@ -63,16 +66,11 @@ public class Player implements Emitter {
         } else {
             isBeforeZPressed = false;
         }
-        /*
-         * if (x < ARROW_SIZE)
-         * x = ARROW_SIZE;
-         * if (x > MissileSimulator.PANEL_WIDTH - ARROW_SIZE)
-         * x = MissileSimulator.PANEL_WIDTH - ARROW_SIZE;
-         * if (y < ARROW_SIZE)
-         * y = ARROW_SIZE;
-         * if (y > MissileSimulator.PANEL_HEIGHT - ARROW_SIZE)
-         * y = MissileSimulator.PANEL_HEIGHT - ARROW_SIZE;
-         */
+
+        speed *= AIR_RESISTANCE;
+        x += Math.cos(angle) * speed;
+        y += Math.sin(angle) * speed;
+
         flareManager.updateFlares();
     }
 
@@ -124,6 +122,10 @@ public class Player implements Emitter {
 
     public double getAngle() {
         return angle;
+    }
+
+    public double getSpeed() {
+        return speed;
     }
 
     @Override

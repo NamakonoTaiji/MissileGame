@@ -40,7 +40,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         labelManager.addLabel("Angle: ", 10, 50, 200, 30);
         labelManager.addLabel("Memory Usage: ", 10, 90, 300, 30);
         labelManager.addLabel("Navigation: ", 10, 130, 300, 30);
-        labelManager.addLabel("Debug: ", 10, 170, 900, 30);
+        labelManager.addLabel("Speed: ", 10, 170, 900, 30);
 
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
@@ -95,7 +95,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         double offsetY = (getHeight() / 2.0) / scale - player.getY();
         g2d.translate(offsetX, offsetY);
 
-        g.setColor(new Color(200, 200, 200));
+        g.setColor(new Color(100, 100, 100));
         g.fillRect(this.getWidth() * -10, this.getHeight() * -10, this.getWidth() * 20, this.getHeight() * 20);
 
         player.draw(g2d);
@@ -109,7 +109,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         labelManager.updateLabel(1, String.format("Angle: %.2f", Math.toDegrees(launcherToTargetAngle)));
         labelManager.updateLabel(2, String.format("Memory Usage: %,d KB", getMemoryUsage()));
         labelManager.updateLabel(3, String.format("Navigation: " + missileLauncher.getMissileMode()));
-        labelManager.updateLabel(4, String.format("Debug: Emitters: " + emitterManager.getEmitters().size()));
+        labelManager.updateLabel(4, String.format("Speed: %.3f", player.getSpeed()));
     }
 
     @Override

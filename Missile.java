@@ -4,7 +4,6 @@ import java.util.Queue;
 import java.util.List;
 
 public class Missile {
-    private final double PI = Math.PI;
 
     private double x;
     private double y;
@@ -15,13 +14,15 @@ public class Missile {
     private EmitterManager emitterManager;
 
     private double playerIRSensitivity = 1.0;
-    private double missileMaxTurnRate = 0.003;
-    private int burnTimeOfBooster = 900;
+    private double missileMaxTurnRate = 0.0028;
+    private int burnTimeOfBooster = 1300;
     private double deltaVOfBooster = 0.0020;
     private double airResistance = 0.9995;
-    private double seekerFOV = Math.toRadians(5);
+    private double IRCCMSeekerFOV = Math.toRadians(0.5);
+    private double normalSeekerFOV = Math.toRadians(5);
+    private double seekerFOV;
     private double seekerAngle;
-    private final int LIFESPAN = 2700;
+    private final int LIFESPAN = 3300;
 
     private int age = 0;
     private double targetX = 0;
@@ -49,6 +50,7 @@ public class Missile {
         this.emitterManager = emitterManager;
         this.trail = new LinkedList<>();
         this.player = player;
+        this.seekerFOV = normalSeekerFOV;
     }
 
     public void update() {
@@ -68,14 +70,14 @@ public class Missile {
 
             if (sourceType.equals("Player")) {
                 double playerAngle = player.getAngle();
-                infraredEmission /= emitterDistance; // 距離が遠いほど熱源が小さく見える
+                infraredEmission /= emitterDistance * 0.8; // 距離が遠いほど熱源が小さく見える
                 infraredEmission *= playerIRSensitivity; // シーカーのプレイヤーとフレアの識別性能を実装
-                infraredEmission /= MathUtils.clamp(Math.abs(MathUtils.normalizeAngle(seekerAngle, playerAngle)), 0.2,
+                infraredEmission /= MathUtils.clamp(Math.abs(MathUtils.normalizeAngle(seekerAngle, playerAngle)), 0.4,
                         1.5) / 1.5; // 後方排気を捉えると強く熱源を認識する
             } else if (sourceType.equals("Flare")) {
-                infraredEmission /= emitterDistance;
+                infraredEmission /= emitterDistance * 0.8;
             }
-            if (Math.abs(angleDifferenceToEmitter) <= seekerFOV) {
+            if (Math.abs(angleDifferenceToEmitter) <= seekerFOV / 2) {
                 // より大きい熱源に吸われる
                 weightedSumX += emitterX * infraredEmission;
                 weightedSumY += emitterY * infraredEmission;
@@ -83,6 +85,7 @@ public class Missile {
             }
         }
 
+        // 視界に熱源がある場合の処理
         if (totalWeight > 0) {
             targetX = weightedSumX / totalWeight;
             targetY = weightedSumY / totalWeight;
@@ -90,6 +93,9 @@ public class Missile {
             double deltaY = targetY - y;
             targetAngle = Math.atan2(deltaY, deltaX);
             seekerAngle = targetAngle;
+            seekerFOV = IRCCMSeekerFOV; // 視界に熱源がある場合はIRCCMの視野角を適応
+        } else {
+            seekerFOV = normalSeekerFOV; // ない場合は捜査時視野角
         }
 
         // 角度の差を計算し、正規化
