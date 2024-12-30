@@ -28,10 +28,10 @@ public class Player implements Emitter {
     private double scale;
     private double dragForce = 0;
     private double liftForce = 0;
-    private final double AOA_MAX = 0.1;
-    private final double ENGINE_POWER = 2;
-    private final double MASS = 7000;
-    private final double DRAG_COEFFICIENT = 0.2; // 抗力係数
+    private final double AOA_MAX = 0.0033;
+    private final double ENGINE_POWER = 3.8;
+    private final double MASS = 15000;
+    private final double DRAG_COEFFICIENT = 0.16; // 抗力係数
     private final double LIFT_COEFFICIENT = 0.5; // 揚力係数
     private final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
     private final double CROSS_SECTIONAL_AREA = 20; // 物体の断面積 (m^2)
@@ -58,9 +58,12 @@ public class Player implements Emitter {
 
     public void update() {
         double acc = 0;
-        double rudderRock = MathUtils.clamp(-1.8 * speed + 2.26, 0.1, 1);
-        double AOA = AOA_MAX * rudderRock;
-
+        double adjustmentFactorConst = 0;
+        double rudderRock = MathUtils.clamp(-1.3333 * speed + 2.0667, 0.1, 1); // 高速域舵ロック
+        double turnRate = MathUtils.clamp(1 - Math.abs(speed - 0.8) / 0.7, 0.4, 1); // 適正旋回速度の再現
+        double turningAdditionalDrag = 0;
+        double AOA = AOA_MAX * turnRate * rudderRock; // 舵ロックと適正旋回速度を組み込んだ旋回
+        System.out.println(turnRate);
         // エンジンの加速
         if (upPressed) {
             acc = ENGINE_POWER / MASS; // エンジン稼働時の加速度
@@ -68,10 +71,14 @@ public class Player implements Emitter {
 
         // 旋回操作
         if (leftPressed) {
-            angle -= AOA * maxTurnRate;
+            adjustmentFactorConst = 0.003;
+            angle -= AOA;
+            turningAdditionalDrag = turnRate;// 適正旋回速度で曲がるとエネルギー損失大
         }
         if (rightPressed) {
-            angle += AOA * maxTurnRate;
+            adjustmentFactorConst = 0.003;
+            angle += AOA;
+            turningAdditionalDrag = turnRate;// 適正旋回速度で曲がるとエネルギー損失大
         }
 
         // フレアの操作
@@ -88,29 +95,37 @@ public class Player implements Emitter {
         liftForce = 0.5 * LIFT_COEFFICIENT * AIR_DENSITY * CROSS_SECTIONAL_AREA * speed * speed;
         dragForce = 0.5 * DRAG_COEFFICIENT * AIR_DENSITY * CROSS_SECTIONAL_AREA * speed * speed;
 
-        // 横加速度による迎え角の増大に伴う追加の空気抵抗
-        double lateralAcceleration = speed * speed / (MASS / liftForce); // 横加速度
-        double inducedDrag = 0.5 * DRAG_COEFFICIENT * AIR_DENSITY * CROSS_SECTIONAL_AREA * lateralAcceleration * AOA;
-        dragForce += inducedDrag;
+        // 速度ベクトルの角度と機体の向きの角度の違いによる追加の空気抵抗
+        double velocityAngle = Math.atan2(velocityY, velocityX);
+        double angleDifference = Math.abs(velocityAngle - angle);
+        double additionalDrag = Math.min(Math.abs(DRAG_COEFFICIENT + Math.sin(angleDifference) * 11), 3)
+                + turningAdditionalDrag * 1.1; // ドリフト角が大きいほど空気抵抗増加
 
         // 慣性効果の計算
-        double inertiaEffect = acc - dragForce / MASS;
+        double inertiaEffect = acc - (dragForce + additionalDrag) / MASS;
 
         // 加速度の反映と速度の更新
         speed += inertiaEffect;
 
         // 速度ベクトルの更新
-        double moveAngle = Math.atan2(velocityY, velocityX);
-        double alignmentFactor = (1 - Math.min(speed / 1.2, 1)) * 0.1; // 速度に応じた調整
-        moveAngle += (angle - moveAngle) * (1 - alignmentFactor); // 速度に応じてベクトルの向きと機体の向きを調整
-
-        velocityX += Math.cos(moveAngle) * speed * alignmentFactor;
-        velocityY += Math.sin(moveAngle) * speed * alignmentFactor;
-
-        // ベクトルを正規化し、速度に再度反映
         double velocityMagnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
-        velocityX = (velocityX / velocityMagnitude) * speed;
-        velocityY = (velocityY / velocityMagnitude) * speed;
+        double normalizedVelocityX = velocityX / velocityMagnitude;
+        double normalizedVelocityY = velocityY / velocityMagnitude;
+
+        double targetVelocityX = Math.cos(angle);
+        double targetVelocityY = Math.sin(angle);
+
+        // 速度によってドリフト角を調整する調整ファクター
+        // 速度が低いほど大きなドリフト角,直進時はadjustmentFactorConstが0になりドリフトがゆっくり戻る
+        double adjustmentFactor = MathUtils.clamp(speed * 0.008, 0.0006, 1.4) + adjustmentFactorConst;
+
+        // ベクトルを徐々に機体の向きに合わせる
+        normalizedVelocityX += (targetVelocityX - normalizedVelocityX) * adjustmentFactor;
+        normalizedVelocityY += (targetVelocityY - normalizedVelocityY) * adjustmentFactor;
+
+        // ベクトルの正規化と速度の反映
+        velocityX = normalizedVelocityX * speed;
+        velocityY = normalizedVelocityY * speed;
 
         // 速度ベクトルを位置に反映
         x += velocityX;
@@ -140,6 +155,10 @@ public class Player implements Emitter {
                     new int[] { -ARROW_SIZE / 2, 0, ARROW_SIZE / 2 }, 3);
         }
         g2d.setTransform(originalTransform);
+
+        // ベクトルの向きを描画
+        g2d.setColor(Color.GREEN);
+        g2d.drawLine((int) x, (int) y, (int) (x + velocityX * 100), (int) (y + velocityY * 100));
 
         // フレアを描画
         flareManager.drawFlares(g2d);

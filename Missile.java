@@ -13,16 +13,16 @@ public class Missile {
     private double angleDifference;
     private EmitterManager emitterManager;
 
-    private double playerIRSensitivity = 0.3;
+    private double playerIRSensitivity = 0.5;
     private double missileMaxTurnRate = 0.0031;
-    private int burnTimeOfBooster = 1000;
-    private double deltaVOfBooster = 0.0029;
+    private int burnTimeOfBooster = 1200;
+    private double deltaVOfBooster = 0.0037;
     private double airResistance = 0.9995;
     private double IRCCMSeekerFOV = Math.toRadians(5);
     private double normalSeekerFOV = Math.toRadians(5);
     private double seekerFOV;
     private double seekerAngle;
-    private final int LIFESPAN = 3300;
+    private final int LIFESPAN = 3700;
 
     private int age = 0;
     private double targetX = 0;
