@@ -14,7 +14,6 @@ public class Player implements Emitter {
     private double speed;
     private double velocityX; // ベクトルのX成分
     private double velocityY; // ベクトルのY成分
-    private double maxTurnRate = 0.05;
     private double infraredEmission = 1.0;
     private boolean upPressed;
     private boolean leftPressed;
