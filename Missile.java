@@ -15,7 +15,7 @@ public class Missile {
 
     private double playerIRSensitivity = 0.3;
     private double missileMaxTurnRate = 0.0031;
-    private int burnTimeOfBooster = 1300;
+    private int burnTimeOfBooster = 1000;
     private double deltaVOfBooster = 0.0029;
     private double airResistance = 0.9995;
     private double IRCCMSeekerFOV = Math.toRadians(5);

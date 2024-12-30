@@ -27,7 +27,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         emitterManager = new EmitterManager();
 
-        player = new Player(200.0, 200.0, 0.4, 0.003, emitterManager, scale); // EmitterManagerを渡す
+        player = new Player(200.0, 200.0, 0.4, emitterManager, scale); // EmitterManagerを渡す
         emitterManager.addEmitter(player);
 
         missileLauncher = new MissileLauncher(150, 150, 0.0, 30, emitterManager, player);
@@ -40,8 +40,8 @@ public class MissileSimulator extends JPanel implements KeyListener {
         labelManager.addLabel("Angle: ", 10, 50, 200, 30);
         labelManager.addLabel("Memory Usage: ", 10, 90, 300, 30);
         labelManager.addLabel("Navigation: ", 10, 130, 300, 30);
-        labelManager.addLabel("Speed: ", 10, 170, 900, 30);
-
+        labelManager.addLabel("Speed: ", 10, 170, 300, 30);
+        labelManager.addLabel("DragForce: ", 10, 220, 300, 30);
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -110,6 +110,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         labelManager.updateLabel(2, String.format("Memory Usage: %,d KB", getMemoryUsage()));
         labelManager.updateLabel(3, String.format("Navigation: " + missileLauncher.getMissileMode()));
         labelManager.updateLabel(4, String.format("Speed: %.3f", player.getSpeed()));
+        labelManager.updateLabel(5, String.format("DragForce: %.6f", player.getDragForce()));
     }
 
     @Override
