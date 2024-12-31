@@ -13,12 +13,12 @@ public class Missile {
     private double angleDifference;
     private EmitterManager emitterManager;
 
-    private double playerIRSensitivity = 0.5;
-    private double missileMaxTurnRate = 0.0031;
+    private double playerIRSensitivity = 0.8;
+    private double missileMaxTurnRate = 0.0028;
     private int burnTimeOfBooster = 1200;
-    private double deltaVOfBooster = 0.0037;
+    private double deltaVOfBooster = 0.0032;
     private double airResistance = 0.9995;
-    private double IRCCMSeekerFOV = Math.toRadians(5);
+    private double IRCCMSeekerFOV = Math.toRadians(1);
     private double normalSeekerFOV = Math.toRadians(5);
     private double seekerFOV;
     private double seekerAngle;
@@ -174,8 +174,6 @@ public class Missile {
                         (int) (x + Math.cos(fovRight) * 8000) },
                 new int[] { (int) y, (int) (y + Math.sin(fovLeft) * 8000), (int) (y + Math.sin(fovRight) * 8000) },
                 3);
-        // g2d.fillArc((int) (x - 1500), (int) (y - 1500), 3000, 3000, (int) arcStart,
-        // (int) arcExtent);
     }
 
     public boolean isExpired() {

@@ -18,7 +18,6 @@ public class MissileSimulator extends JPanel implements KeyListener {
     private EmitterManager emitterManager;
     private FlareManager flareManager;
     private LabelManager labelManager;
-
     private Timer timer;
 
     public MissileSimulator() {
@@ -53,7 +52,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
     }
 
     public void update() {
-        player.update();
+        player.update(missileLauncher.getMissiles(), labelManager);
         missileLauncher.updateMissiles(player.getX(), player.getY());
         flareManager.updateFlares();
         emitterManager.updateEmitters();
@@ -61,29 +60,13 @@ public class MissileSimulator extends JPanel implements KeyListener {
     }
 
     private void checkCollisions() {
-        List<Missile> missiles = missileLauncher.getMissiles();
-        double hitRadius = 6;
-        double missileHitRadius = 1.0;
-
-        synchronized (missiles) {
-            Iterator<Missile> iterator = missiles.iterator();
-            while (iterator.hasNext()) {
-                Missile missile = iterator.next();
-                double distance = Math.sqrt(
-                        Math.pow(missile.getX() - player.getX(), 2) + Math.pow(missile.getY() - player.getY(), 2));
-                if (distance < hitRadius + missileHitRadius) {
-                    String message = "Hit detected! Missile at (" + missile.getX() + ", " + missile.getY() + ")";
-                    System.out.println(message);
-                    labelManager.addLogMessage(message);
-                    iterator.remove();
-                }
-            }
-        }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        double launcherToTargetAngle = missileLauncher.getLauncherToTargetAngle();
+
         Graphics2D g2d = (Graphics2D) g;
         AffineTransform originalTransform = g2d.getTransform();
 
@@ -95,8 +78,20 @@ public class MissileSimulator extends JPanel implements KeyListener {
         double offsetY = (getHeight() / 2.0) / scale - player.getY();
         g2d.translate(offsetX, offsetY);
 
+        // グリッドの背景を描画
+        int backGroundImageSize = 50;
         g.setColor(new Color(100, 100, 100));
-        g.fillRect(this.getWidth() * -10, this.getHeight() * -10, this.getWidth() * 20, this.getHeight() * 20);
+        g.fillRect(this.getWidth() * -backGroundImageSize, this.getHeight() * -backGroundImageSize,
+                this.getWidth() * backGroundImageSize * 2, this.getHeight() * backGroundImageSize * 2);
+
+        g2d.setColor(new Color(150, 150, 150));
+        int gridSize = 150;
+        for (int i = -getWidth() * backGroundImageSize; i < getWidth() * backGroundImageSize; i += gridSize) {
+            g2d.drawLine(i, -getHeight() * backGroundImageSize, i, getHeight() * backGroundImageSize);
+        }
+        for (int j = -getHeight() * backGroundImageSize; j < getHeight() * backGroundImageSize; j += gridSize) {
+            g2d.drawLine(-getWidth() * backGroundImageSize, j, getWidth() * backGroundImageSize, j);
+        }
 
         player.draw(g2d);
         missileLauncher.draw(g2d, player.getX(), player.getY());
@@ -105,11 +100,10 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         // ラベルの更新
         labelManager.updateLabel(0, String.format("Coordinates: (%.2f, %.2f)", player.getX(), player.getY()));
-        double launcherToTargetAngle = missileLauncher.getLauncherToTargetAngle();
         labelManager.updateLabel(1, String.format("Angle: %.2f", Math.toDegrees(launcherToTargetAngle)));
         labelManager.updateLabel(2, String.format("Memory Usage: %,d KB", getMemoryUsage()));
         labelManager.updateLabel(3, String.format("Navigation: " + missileLauncher.getMissileMode()));
-        labelManager.updateLabel(4, String.format("Speed: %.3f", player.getSpeed()));
+        labelManager.updateLabel(4, String.format("Speed: %.1f", player.getSpeed() * 1000));
         labelManager.updateLabel(5, String.format("DragForce: %.6f", player.getDragForce()));
     }
 

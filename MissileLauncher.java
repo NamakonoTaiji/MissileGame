@@ -39,8 +39,9 @@ public class MissileLauncher {
             Missile missile = new Missile(x, y, launchSpeed, launcherToTargetAngle, navigationMode, emitterManager,
                     player);
             missiles.add(missile);
+            SoundPlayer.playSound("sounds/misslie_start_heavy_far-002.wav", -5, false);
             System.out.println(
-                    "Missile launched at angle " + String.format("%.2f", Math.toDegrees(launcherToTargetAngle)) +
+                    "Missile launched at  angle " + String.format("%.2f", Math.toDegrees(launcherToTargetAngle)) +
                             " with speed " + launchSpeed);
             isLoaded = false;
             missileCount = 0;
