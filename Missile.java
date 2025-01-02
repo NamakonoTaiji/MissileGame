@@ -1,42 +1,41 @@
 import java.awt.*;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.List;
 
 public class Missile {
+    // 定数
+    private static final double PLAYER_IR_SENSITIVITY = 0.9;
+    private static final double MISSILE_MAX_TURN_RATE = 0.0025;
+    private static final double DELTA_V_OF_BOOSTER = 0.0033;
+    private static final double AIR_RESISTANCE = 0.9995;
+    private static final double IRCCM_SEEKER_FOV = Math.toRadians(2);
+    private static final double NORMAL_SEEKER_FOV = Math.toRadians(8);
+    private static final int LIFESPAN = 3200;
+    public static final int BURN_TIME_OF_BOOSTER = 1300;
 
+    // フィールド
     private double x;
     private double y;
     private double speed;
     private double angle;
     private double oldAngle;
     private double angleDifference;
-    private EmitterManager emitterManager;
-
-    private double playerIRSensitivity = 0.8;
-    private double missileMaxTurnRate = 0.0028;
-    private int burnTimeOfBooster = 1200;
-    private double deltaVOfBooster = 0.0032;
-    private double airResistance = 0.9995;
-    private double IRCCMSeekerFOV = Math.toRadians(1);
-    private double normalSeekerFOV = Math.toRadians(5);
-    private double seekerFOV;
     private double seekerAngle;
-    private final int LIFESPAN = 3700;
+    private double seekerFOV;
+    private double targetX;
+    private double targetY;
+    private double targetAngle;
+    private int age;
+    private int smokeAge = 0;
+    private boolean isCloseSoundPlayed;
 
-    private int age = 0;
-    private double targetX = 0;
-    private double targetY = 0;
-    private double targetAngle = 0;
+    private final EmitterManager emitterManager;
+    private final Player player;
+    private final String navigationMode;
+    private MissileLauncher missileLauncher;
 
-    private String navigationMode;
-
-    private final int TRAIL_LENGTH = 200; // 軌跡の長さ
-    private Queue<Point> trail; // 軌跡を保存するキュー
-    private Player player;
-
+    // コンストラクタ
     public Missile(double x, double y, double speed, double angle, String navigationMode,
-            EmitterManager emitterManager, Player player) {
+            EmitterManager emitterManager, Player player, MissileLauncher missileLauncher) {
         this.x = x;
         this.y = y;
         this.targetX = x;
@@ -48,12 +47,21 @@ public class Missile {
         this.seekerAngle = angle;
         this.oldAngle = angle;
         this.emitterManager = emitterManager;
-        this.trail = new LinkedList<>();
         this.player = player;
-        this.seekerFOV = normalSeekerFOV;
+        this.seekerFOV = NORMAL_SEEKER_FOV;
+        this.missileLauncher = missileLauncher;
     }
 
+    // 更新メソッド
     public void update() {
+        updateSeekers();
+        updateNavigation();
+        updatePosition();
+        updateSound();
+        age++;
+    }
+
+    private void updateSeekers() {
         List<Emitter> emitters = emitterManager.getEmitters();
         double weightedSumX = 0;
         double weightedSumY = 0;
@@ -62,122 +70,154 @@ public class Missile {
         for (Emitter emitter : emitters) {
             double emitterX = emitter.getX();
             double emitterY = emitter.getY();
-            double emitterDistance = Math.sqrt((Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2)));
-            double emitterLOSAngle = Math.atan2(emitterY - y, emitterX - x); // ミサイルを起点とする視線角度に修正
-            double angleDifferenceToEmitter = MathUtils.normalizeAngle(seekerAngle, emitterLOSAngle); // 首振り角 - 熱源LOS角
-            double infraredEmission = emitter.getInfraredEmission(); // 赤外線強度
-            String sourceType = emitter.getSourceType();
+            double emitterDistance = Math.sqrt(Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2));
+            double emitterLOSAngle = Math.atan2(emitterY - y, emitterX - x);
+            double angleDifferenceToEmitter = MathUtils.normalizeAngle(seekerAngle, emitterLOSAngle); // 首振り角-熱源LOS角
+            double infraredEmission = calculateInfraredEmission(emitter, emitterDistance, angleDifferenceToEmitter); // 熱源強度
 
-            if (sourceType.equals("Player")) {
-                double playerAngle = player.getAngle();
-                infraredEmission /= emitterDistance * 0.5; // 距離が遠いほど熱源が小さく見える
-                infraredEmission *= playerIRSensitivity; // シーカーのプレイヤーとフレアの識別性能を実装
-                infraredEmission /= MathUtils.clamp(Math.abs(MathUtils.normalizeAngle(seekerAngle, playerAngle)), 0.4,
-                        1.5) / 1.5; // 後方排気を捉えると強く熱源を認識する
-            } else if (sourceType.equals("Flare")) {
-                infraredEmission /= emitterDistance * 0.5;
-            }
             if (Math.abs(angleDifferenceToEmitter) <= seekerFOV / 2) {
-                // より大きい熱源に吸われる
+                // 熱源強度に基づいた重みづけ
                 weightedSumX += emitterX * infraredEmission;
                 weightedSumY += emitterY * infraredEmission;
                 totalWeight += infraredEmission;
             }
         }
 
-        // 視界に熱源がある場合の処理
+        // 熱源強度に基づいて目標の座標を平均する
         if (totalWeight > 0) {
             targetX = weightedSumX / totalWeight;
             targetY = weightedSumY / totalWeight;
             double deltaX = targetX - x;
             double deltaY = targetY - y;
-            targetAngle = Math.atan2(deltaY, deltaX);
+            targetAngle = Math.atan2(deltaY, deltaX); // 平均から割り出された目標LOS角
             seekerAngle = targetAngle;
-            seekerFOV = IRCCMSeekerFOV; // 視界に熱源がある場合はIRCCMの視野角を適応
+            seekerFOV = IRCCM_SEEKER_FOV; // 熱源を検出してる場合は狭域シーカーを適応
         } else {
-            seekerFOV = normalSeekerFOV; // ない場合は起動時視野角
+            seekerFOV = NORMAL_SEEKER_FOV; // 熱源を検出していない場合は通常シーカーを適応
         }
-
-        // 角度の差を計算し、正規化
-        switch (navigationMode) {
-            case "PPN": {
-                // 単追尾(PPN)
-                angleDifference = MathUtils.normalizeAngle(targetAngle, angle);
-                break;
-            }
-            case "PN": {
-                // 比例航法(PN)
-                angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle);
-                angleDifference = angleDifference * 3;
-                oldAngle = targetAngle;
-                break;
-            }
-            case "MPN": {
-                // 修正比例航法(MPN)
-                angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle);
-                angleDifference = angleDifference * 3 + MathUtils.normalizeAngle(targetAngle, angle) * 0.004;
-                oldAngle = targetAngle;
-                break;
-            }
-        }
-        // 角度の差をクランプ
-        angleDifference = MathUtils.clamp(angleDifference, -missileMaxTurnRate, missileMaxTurnRate);
-        angle += angleDifference;
-
-        // ブースター燃焼中は加速
-        if (age <= burnTimeOfBooster) {
-            speed += deltaVOfBooster;
-        }
-        speed *= (1 - Math.abs(angleDifference) * 0.4); // 旋回による運動エネルギーの消費
-        // 空気抵抗による減速
-        speed = speed * airResistance;
-
-        // 速度に基づいて移動
-        x += Math.cos(angle) * speed;
-        y += Math.sin(angle) * speed;
-
-        // 軌跡を更新
-        if (trail.size() >= TRAIL_LENGTH) {
-            trail.poll(); // 古いポイントを削除
-        }
-        if (age <= burnTimeOfBooster && age % 5 == 0) {
-            trail.add(new Point((int) x, (int) y));
-        }
-        // ミサイルの寿命を更新
-        age += 1;
     }
 
+    // 熱源強度計算メソッド
+    private double calculateInfraredEmission(Emitter emitter, double emitterDistance, double angleDifferenceToEmitter) {
+        double infraredEmission = emitter.getInfraredEmission();
+        String sourceType = emitter.getSourceType();
+
+        if (sourceType.equals("Player")) { // プレイヤーに対する熱源強度計算
+            double playerAngle = player.getAngle();
+            infraredEmission /= emitterDistance * 0.5; // 遠距離ほど熱源が小さい
+            infraredEmission *= PLAYER_IR_SENSITIVITY; // プレイヤー機体に対する欺瞞耐性
+            infraredEmission /= MathUtils.clamp(Math.abs(MathUtils.normalizeAngle(seekerAngle, playerAngle)), 0.4, 1.5) // 後方排気をより大きくとらえる
+                    / 1.5;
+        } else if (sourceType.equals("Flare")) { // フレアに対する熱源強度計算
+            infraredEmission /= emitterDistance * 0.5;
+        }
+
+        return infraredEmission;
+    }
+
+    private void updateNavigation() {
+        switch (navigationMode) {
+            // 単追尾
+            case "PPN" -> {
+                angleDifference = MathUtils.normalizeAngle(targetAngle, angle);
+            }
+            // 比例航法
+            case "PN" -> {
+                angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle) * 3;
+                oldAngle = targetAngle;
+            }
+            // 修正比例航法
+            case "MPN" -> {
+                angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle) * 3
+                        + MathUtils.normalizeAngle(targetAngle, angle) * 0.0015;
+                oldAngle = targetAngle;
+            }
+            // 半自動指令照準線一致誘導
+            case "SACLOS" -> {
+                double distFromMissileLauncher = missileLauncher.distanceFromMissileLauncher(x, y);
+                double SACLOSTargetX = missileLauncher.getX()
+                        + Math.cos(missileLauncher.getLauncherToTargetAngle()) * distFromMissileLauncher;
+                double SACLOSTargetY = missileLauncher.getY()
+                        + Math.sin(missileLauncher.getLauncherToTargetAngle()) * distFromMissileLauncher;
+                double deltaX = SACLOSTargetX - x;
+                double deltaY = SACLOSTargetY - y;
+                angleDifference = MathUtils.normalizeAngle(Math.atan2(deltaY, deltaX), angle) * 0.0011;
+                System.out.println(angleDifference);
+            }
+        }
+
+        angleDifference = MathUtils.clamp(angleDifference, -MISSILE_MAX_TURN_RATE, MISSILE_MAX_TURN_RATE);
+        angle += angleDifference;
+    }
+
+    // ミサイルの座標を更新
+    private void updatePosition() {
+        // ブースター燃焼中は加速
+        if (age <= BURN_TIME_OF_BOOSTER) {
+            speed += DELTA_V_OF_BOOSTER;
+        }
+
+        speed *= (1 - Math.abs(angleDifference) * 0.4); // 旋回すると減速
+        speed *= AIR_RESISTANCE;
+
+        x += Math.cos(angle) * speed;
+        y += Math.sin(angle) * speed;
+    }
+
+    private void updateSound() {
+        boolean isCloseFromPlayer = player.distanceFromPlayer(x, y) < 70;
+
+        // 近距離で風切り音を再生
+        if (isCloseFromPlayer && !isCloseSoundPlayed) {
+            String sound = speed < 1.8 ? "sounds/rocket_fly_by-007.wav" : "sounds/missile_sonic_boom-001.wav"; // 速度が1.8未満か否かで二種類の風切り音を切り替え
+            SoundPlayer.playSound(sound, 0, false);
+            isCloseSoundPlayed = true;
+        } else if (!isCloseFromPlayer) {
+            isCloseSoundPlayed = false;
+        }
+    }
+
+    // 描画メソッド
     public void draw(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
-        // 軌跡を描画
-        g2d.setColor(new Color(255, 255, 255, 90));
-        for (Point point : trail) {
-            g2d.fillOval(point.x - 2, point.y - 2, 4, 4);
-        }
-        // ミサイル自体を描画
+        // ミサイルを描画
         g2d.setColor(Color.BLUE);
         g2d.drawOval((int) (x - 1.5), (int) (y - 1.5), 3, 3);
-        g.drawLine((int) x, (int) y, (int) ((x) + 5 * Math.cos(angle)),
-                (int) ((y) + 5 * Math.sin(angle)));
+        g.drawLine((int) x, (int) y, (int) ((x) + 5 * Math.cos(angle)), (int) ((y) + 5 * Math.sin(angle)));
 
-        // シーカーの視点
-        g2d.setColor(Color.BLACK);
-        g2d.drawOval((int) targetX - 3, (int) targetY - 3, 6, 6);
+        if (!navigationMode.equals("SACLOS")) {
+            // 焦点を描画
+            g2d.setColor(Color.BLACK);
+            g2d.drawOval((int) targetX - 3, (int) targetY - 3, 6, 6);
 
-        // 視野角の範囲を描画（半透明の扇形）
-        double fovLeft = MathUtils.normalizeAngle(seekerAngle, -seekerFOV / 2);
-        double fovRight = MathUtils.normalizeAngle(seekerAngle, seekerFOV / 2);
-        g2d.setColor(new Color(255, 0, 0, 10));
-        g2d.fillPolygon(
-                new int[] { (int) x, (int) (x + Math.cos(fovLeft) * 8000),
-                        (int) (x + Math.cos(fovRight) * 8000) },
-                new int[] { (int) y, (int) (y + Math.sin(fovLeft) * 8000), (int) (y + Math.sin(fovRight) * 8000) },
-                3);
+            // シーカーの視点方向の視野角を描画
+            double fovLeft = MathUtils.normalizeAngle(seekerAngle, -seekerFOV / 2);
+            double fovRight = MathUtils.normalizeAngle(seekerAngle, seekerFOV / 2);
+            g2d.setColor(new Color(255, 0, 0, 10));
+            g2d.fillPolygon(
+                    new int[] { (int) x, (int) (x + Math.cos(fovLeft) * 8000), (int) (x + Math.cos(fovRight) * 8000) },
+                    new int[] { (int) y, (int) (y + Math.sin(fovLeft) * 8000), (int) (y + Math.sin(fovRight) * 8000) },
+                    3);
+        }
     }
 
+    // 判定メソッド
     public boolean isExpired() {
         return age >= LIFESPAN;
+    }
+
+    // 排煙を記憶させた時刻の入力/出力
+    public int getSmokeAddTime() {
+        return smokeAge;
+    }
+
+    public void setSmokeAddTime(int age) {
+        this.smokeAge = age;
+    }
+
+    public double getSpeed() {
+        return speed;
     }
 
     // ゲッターメソッド
@@ -187,5 +227,9 @@ public class Missile {
 
     public double getY() {
         return y;
+    }
+
+    public int getAge() {
+        return age;
     }
 }

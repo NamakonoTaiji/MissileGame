@@ -23,6 +23,7 @@ public class LabelManager {
         logTextArea.setOpaque(false); // 不透明にしない
 
         // フォントサイズを設定
+        logTextArea.setForeground(Color.BLACK);
         logTextArea.setFont(new Font("Serif", Font.PLAIN, 15)); // ここでフォントサイズを設定
 
         scrollPane = new JScrollPane(logTextArea);

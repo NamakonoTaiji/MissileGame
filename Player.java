@@ -9,8 +9,18 @@ import java.util.Random;
 import javax.imageio.ImageIO;
 
 public class Player implements Emitter {
+    // 定数
     private static final int ARROW_SIZE = 6;
     private static final int IMAGE_REDUCTION = 20;
+    private static final double AOA_MAX = 0.0030;
+    private static final double ENGINE_POWER = 4;
+    private static final double MASS = 15000;
+    private static final double DRAG_COEFFICIENT = 0.16; // 抗力係数
+    private static final double LIFT_COEFFICIENT = 0.5; // 揚力係数
+    private static final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
+    private static final double CROSS_SECTIONAL_AREA = 20; // 物体の断面積 (m^2)
+
+    // フィールド
     private double x;
     private double y;
     private double angle; // 機体の向き
@@ -30,13 +40,6 @@ public class Player implements Emitter {
     private double scale;
     private double dragForce = 0;
     private double liftForce = 0;
-    private final double AOA_MAX = 0.0030;
-    private final double ENGINE_POWER = 4;
-    private final double MASS = 15000;
-    private final double DRAG_COEFFICIENT = 0.16; // 抗力係数
-    private final double LIFT_COEFFICIENT = 0.5; // 揚力係数
-    private final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
-    private final double CROSS_SECTIONAL_AREA = 20; // 物体の断面積 (m^2)
     private List<Missile> missiles;
     private double hitRadius = 6;
     private LabelManager labelManager;
@@ -50,6 +53,7 @@ public class Player implements Emitter {
             "sounds/module_damaged/module_damage-003.wav"
     };
 
+    // コンストラクタ
     public Player(double x, double y, double speed, EmitterManager emitterManager, double scale) {
         this.x = x;
         this.y = y;
@@ -73,61 +77,76 @@ public class Player implements Emitter {
         SoundPlayer.playEngineSound("sounds/engine_66_exterior.wav", 1, true);
     }
 
+    // プレイヤーの更新
     public void update(List<Missile> missiles, LabelManager labelManager) {
         this.missiles = missiles;
         this.labelManager = labelManager;
-        double acc = 0;
+        double acc = calculateAcceleration();
         double adjustmentFactorConst = 0;
-        double rudderRock = MathUtils.clamp(-0.5 * speed + 1.45, 0.1, 1); // 高速域舵ロック
-        double turnRate = MathUtils.clamp(1 - Math.abs(speed - 0.8) / 0.5, 0.3, 1); // 適正旋回速度の再現
-        double turningAdditionalDrag = 0;
-        double AOA = AOA_MAX * turnRate * rudderRock; // 舵ロックと適正旋回速度を組み込んだ旋回
-        // エンジンの加速
-        if (upPressed) {
-            acc = ENGINE_POWER / MASS; // エンジン稼働時の加速度
-        }
 
         // 旋回操作
+        adjustmentFactorConst = handleTurning(adjustmentFactorConst);
+
+        // 慣性効果の計算
+        double inertiaEffect = acc - calculateDragAndLift();
+
+        // 加速度の反映と速度の更新
+        speed += inertiaEffect;
+        speed = Math.max(speed, 0.01); // 静止バグ対策
+
+        // 速度ベクトルの更新
+        updateVelocity(adjustmentFactorConst);
+
+        // 速度ベクトルを位置に反映
+        x += velocityX;
+        y += velocityY;
+
+        handleSonicBoom();
+        handleFlare();
+
+        SoundPlayer.playRWRLockSound(0); // RWRロック警報ループ再生
+        checkCollisions();
+        flareManager.updateFlares();
+    }
+
+    // ↑キー入力時加速
+    private double calculateAcceleration() {
+        return upPressed ? ENGINE_POWER / MASS : 0; // エンジン稼働時の加速度
+    }
+
+    private double handleTurning(double adjustmentFactorConst) {
+        double rudderRock = MathUtils.clamp(-0.5 * speed + 1.45, 0.1, 1); // 高速域舵ロック
+        double turnRate = MathUtils.clamp(1 - Math.abs(speed - 0.8) / 0.5, 0.3, 1); // 適正旋回速度の再現
+        double AOA = AOA_MAX * turnRate * rudderRock; // 舵ロックと適正旋回速度を組み込んだ旋回
+
         if (leftPressed) {
             adjustmentFactorConst = 0.0024;
             angle -= AOA;
-            turningAdditionalDrag = turnRate;// 適正旋回速度で曲がるとエネルギー損失大
         }
         if (rightPressed) {
             adjustmentFactorConst = 0.0024;
             angle += AOA;
-            turningAdditionalDrag = turnRate;// 適正旋回速度で曲がるとエネルギー損失大
         }
+        return adjustmentFactorConst;
+    }
 
-        // 揚力と抗力の計算
+    // 慣性計算
+    private double calculateDragAndLift() {
         liftForce = 0.5 * LIFT_COEFFICIENT * AIR_DENSITY * CROSS_SECTIONAL_AREA * speed * speed;
         dragForce = 0.5 * DRAG_COEFFICIENT * AIR_DENSITY * CROSS_SECTIONAL_AREA * speed * speed;
 
         // 速度ベクトルの角度と機体の向きの角度の違いによる追加の空気抵抗
         double velocityAngle = Math.atan2(velocityY, velocityX);
         double angleDifference = Math.abs(MathUtils.normalizeAngle(velocityAngle, angle));
-        double additionalDrag = Math.min(DRAG_COEFFICIENT + Math.abs(Math.sin(angleDifference)) * 15, 4)
-                + turningAdditionalDrag * 1.2; // ドリフト角が大きいほど空気抵抗増加
+        double turningAdditionalDrag = (leftPressed || rightPressed)
+                ? MathUtils.clamp(1 - Math.abs(speed - 0.8) / 0.5, 0.3, 1) * 1.2
+                : 0;
 
-        // フレアの操作
-        if (zPressed) {
-            if (!isBeforeZPressed) {
-                flareManager.addFlare(x - Math.cos(angle) * 10, y - Math.sin(angle) * 10, speed - 0.3, velocityAngle); // 少し後方からフレアを展開
-                SoundPlayer.playSound("sounds/flare-001.wav", 0, false);
-                isBeforeZPressed = true;
-            }
-        } else {
-            isBeforeZPressed = false;
-        }
-        // 慣性効果の計算
-        double inertiaEffect = acc - (dragForce + additionalDrag) / MASS;
+        return (dragForce + Math.min(DRAG_COEFFICIENT + Math.abs(Math.sin(angleDifference)) * 15, 4)
+                + turningAdditionalDrag) / MASS;
+    }
 
-        // 加速度の反映と速度の更新
-        speed += inertiaEffect;
-
-        speed = Math.max(speed, 0.01); // 静止バグ対策
-
-        // 速度ベクトルの更新
+    private void updateVelocity(double adjustmentFactorConst) {
         double velocityMagnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
         double normalizedVelocityX = velocityX / velocityMagnitude;
         double normalizedVelocityY = velocityY / velocityMagnitude;
@@ -136,7 +155,6 @@ public class Player implements Emitter {
         double targetVelocityY = Math.sin(angle);
 
         // 速度によってドリフト角を調整する調整ファクター
-        // 速度が低いほど大きなドリフト角,直進時はadjustmentFactorConstが0になりドリフトがゆっくり戻る
         double adjustmentFactor = MathUtils.clamp(speed * 0.006, 0.0001, 1.4) + adjustmentFactorConst;
 
         // ベクトルを徐々に機体の向きに合わせる
@@ -146,11 +164,10 @@ public class Player implements Emitter {
         // ベクトルの正規化と速度の反映
         velocityX = normalizedVelocityX * speed;
         velocityY = normalizedVelocityY * speed;
+    }
 
-        // 速度ベクトルを位置に反映
-        x += velocityX;
-        y += velocityY;
-
+    // 音速突破時衝撃音再生
+    private void handleSonicBoom() {
         if (speed >= 1.224) {
             mach = true;
         } else {
@@ -158,20 +175,29 @@ public class Player implements Emitter {
             isSonicBoomed = false;
         }
 
-        if (mach && isSonicBoomed == false) {
+        if (mach && !isSonicBoomed) {
             SoundPlayer.playSound("sounds/sonic_boom_close-002.wav", 5, false);
             isSonicBoomed = true;
         }
-        SoundPlayer.playRWRLockSound(0);
-        // ヒット判定を行う
-        checkCollisions();
-
-        flareManager.updateFlares();
     }
 
+    // フレア生成
+    private void handleFlare() {
+        if (zPressed) {
+            if (!isBeforeZPressed) {
+                flareManager.addFlare(x - Math.cos(angle) * 10, y - Math.sin(angle) * 10, speed - 0.3,
+                        Math.atan2(velocityY, velocityX)); // 少し後方からフレアを展開
+                SoundPlayer.playSound("sounds/flare-001.wav", 0, false);
+                isBeforeZPressed = true;
+            }
+        } else {
+            isBeforeZPressed = false;
+        }
+    }
+
+    // 衝突判定
     private void checkCollisions() {
         double missileHitRadius = 1.0;
-        String message = null;
         synchronized (missiles) {
             Iterator<Missile> iterator = missiles.iterator();
             while (iterator.hasNext()) {
@@ -179,42 +205,37 @@ public class Player implements Emitter {
                 double distance = Math.sqrt(
                         Math.pow(missile.getX() - this.x, 2) + Math.pow(missile.getY() - this.y, 2));
                 if (distance < hitRadius + missileHitRadius) {
-                    message = "Hit detected! Missile at (" + missile.getX() + ", " + missile.getY() + ")";
-                    System.out.println(message);
-                    if (labelManager != null) {
-                        labelManager.addLogMessage(message);
-                    }
-
-                    // ランダムな被弾音を再生
-                    String hitSound = hitSounds[random.nextInt(hitSounds.length)];
-                    SoundPlayer.playSound(hitSound, 0, false);
-
+                    handleHit(missile);
                     iterator.remove();
                 }
             }
         }
     }
 
+    // 被弾時処理
+    private void handleHit(Missile missile) {
+        String message = "Hit detected! Missile at (" + missile.getX() + ", " + missile.getY() + ")";
+        System.out.println(message);
+        if (labelManager != null) {
+            labelManager.addLogMessage(message);
+        }
+
+        // ランダムな被弾音を再生
+        String hitSound = hitSounds[random.nextInt(hitSounds.length)];
+        SoundPlayer.playSound(hitSound, 0, false);
+    }
+
+    // 描画メソッド
     public void draw(Graphics2D g2d) {
         AffineTransform originalTransform = g2d.getTransform();
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
         if (playerImage != null) {
-            g2d.setColor(Color.YELLOW);
-            // プレイヤーの中心に移動
-            g2d.translate(x, y);
-            // 画像の中心を基準に回転
-            g2d.rotate(angle);
-            // 画像の縮小
-            int drawX = -imageWidth / 2;
-            int drawY = -imageHeight / 2;
-            g2d.drawImage(playerImage, drawX, drawY, imageWidth, imageHeight, null);
+            drawPlayerImage(g2d);
         } else {
-            g2d.setColor(Color.RED);
-            g2d.translate((int) x, (int) y);
-            g2d.rotate(angle);
-            g2d.fillPolygon(new int[] { -ARROW_SIZE, ARROW_SIZE, -ARROW_SIZE },
-                    new int[] { -ARROW_SIZE / 2, 0, ARROW_SIZE / 2 }, 3);
+            drawPlayerShape(g2d);
         }
+
         g2d.setTransform(originalTransform);
 
         // ベクトルの向きを描画
@@ -225,6 +246,27 @@ public class Player implements Emitter {
         flareManager.drawFlares(g2d);
     }
 
+    private void drawPlayerImage(Graphics2D g2d) {
+        g2d.setColor(Color.YELLOW);
+        // プレイヤーの中心に移動
+        g2d.translate(x, y);
+        // 画像の中心を基準に回転
+        g2d.rotate(angle);
+        // 画像の縮小
+        int drawX = -imageWidth / 2;
+        int drawY = -imageHeight / 2;
+        g2d.drawImage(playerImage, drawX, drawY, imageWidth, imageHeight, null);
+    }
+
+    private void drawPlayerShape(Graphics2D g2d) {
+        g2d.setColor(Color.RED);
+        g2d.translate((int) x, (int) y);
+        g2d.rotate(angle);
+        g2d.fillPolygon(new int[] { -ARROW_SIZE, ARROW_SIZE, -ARROW_SIZE },
+                new int[] { -ARROW_SIZE / 2, 0, ARROW_SIZE / 2 }, 3);
+    }
+
+    // キーイベント設定メソッド
     public void setUpPressed(boolean upPressed) {
         this.upPressed = upPressed;
     }
@@ -241,6 +283,7 @@ public class Player implements Emitter {
         this.zPressed = zPressed;
     }
 
+    // ゲッターメソッド
     public double getAngle() {
         return angle;
     }
@@ -265,6 +308,10 @@ public class Player implements Emitter {
         return liftForce;
     }
 
+    public double distanceFromPlayer(double targetX, double targetY) {
+        return Math.sqrt(Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
+    }
+
     @Override
     public String getSourceType() {
         return "Player";
@@ -285,6 +332,7 @@ public class Player implements Emitter {
         return infraredEmission;
     }
 
+    // ラベルマネージャの設定
     public void setLabelManager(LabelManager labelManager) {
         this.labelManager = labelManager;
     }
