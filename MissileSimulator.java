@@ -21,7 +21,9 @@ public class MissileSimulator extends JPanel implements KeyListener {
     private Player player;
     private MissileLauncher missileLauncher;
     private EmitterManager emitterManager;
+    private ReflectorManager reflectorManager;
     private FlareManager flareManager;
+    private ChaffManager chaffManager;
     private LabelManager labelManager;
     private Timer timer;
     private List<Missile> missiles;
@@ -41,11 +43,14 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
         scale = INITIAL_SCALE;
         emitterManager = new EmitterManager();
-        player = new Player(200.0, 200.0, 0.4, emitterManager, scale);
+        reflectorManager = new ReflectorManager();
+        player = new Player(200.0, 200.0, 0.4, emitterManager, reflectorManager, scale);
         emitterManager.addEmitter(player);
+        reflectorManager.addReflector(player);
 
         missileLauncher = new MissileLauncher(150, 150, 0.0, 100, emitterManager, player);
         flareManager = new FlareManager(emitterManager);
+        chaffManager = new ChaffManager(reflectorManager);
         labelManager = new LabelManager(this);
 
         missiles = Collections.synchronizedList(new ArrayList<>());
@@ -78,7 +83,9 @@ public class MissileSimulator extends JPanel implements KeyListener {
         player.update(missiles, labelManager);
         missileLauncher.updateMissiles();
         flareManager.updateFlares();
+        chaffManager.updateChaffs();
         emitterManager.updateEmitters();
+        reflectorManager.updateReflectors();
         smokeTrail.update();
 
         generateSmokeTrail();

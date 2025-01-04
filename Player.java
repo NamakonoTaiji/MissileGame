@@ -1,6 +1,7 @@
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
+import java.util.List;
 import java.io.IOException;
 import java.io.File;
 import java.util.List;
@@ -8,7 +9,7 @@ import java.util.Iterator;
 import java.util.Random;
 import javax.imageio.ImageIO;
 
-public class Player implements Emitter {
+public class Player implements Emitter, Reflector {
     // 定数
     private static final int ARROW_SIZE = 6;
     private static final int IMAGE_REDUCTION = 20;
@@ -19,21 +20,25 @@ public class Player implements Emitter {
     private static final double LIFT_COEFFICIENT = 0.5; // 揚力係数
     private static final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
     private static final double CROSS_SECTIONAL_AREA = 20; // 物体の断面積 (m^2)
+    private static final double INFRARED_EMISSION = 1.0;
+    public static final double REFLECTOR_STRENGTH = 1.0;
 
     // フィールド
+    private final String team = "Alpha";
+    private Radar radar;
     private double x;
     private double y;
     private double angle; // 機体の向き
     private double speed;
     private double velocityX; // ベクトルのX成分
     private double velocityY; // ベクトルのY成分
-    private double infraredEmission = 1.0;
     private boolean upPressed;
     private boolean leftPressed;
     private boolean rightPressed;
     private boolean isBeforeZPressed = false;
     private boolean zPressed;
     private FlareManager flareManager;
+    private ChaffManager chaffManager;
     private BufferedImage playerImage;
     private int imageWidth;
     private int imageHeight;
@@ -45,6 +50,7 @@ public class Player implements Emitter {
     private Random random = new Random();
     private boolean mach = false;
     private boolean isSonicBoomed = false;
+
     // 被弾音ファイルのリスト
     private String[] hitSounds = {
             "sounds/module_damaged/module_damage-001.wav",
@@ -53,7 +59,8 @@ public class Player implements Emitter {
     };
 
     // コンストラクタ
-    public Player(double x, double y, double speed, EmitterManager emitterManager, double scale) {
+    public Player(double x, double y, double speed, EmitterManager emitterManager,
+            ReflectorManager reflectorManager, double scale) {
         this.x = x;
         this.y = y;
         this.speed = speed;
@@ -61,7 +68,8 @@ public class Player implements Emitter {
         this.velocityX = Math.cos(angle) * speed;
         this.velocityY = Math.sin(angle) * speed;
         this.flareManager = new FlareManager(emitterManager);
-
+        this.chaffManager = new ChaffManager(reflectorManager);
+        this.radar = new Radar(team, "SRC", true, reflectorManager, x, y, angle);
         // 画像を読み込む
         try {
             playerImage = ImageIO.read(new File("images/F-2.png"));
@@ -102,9 +110,15 @@ public class Player implements Emitter {
         handleSonicBoom();
         handleFlare();
 
-        SoundPlayer.playRWRLockSound(0); // RWRロック警報ループ再生
+        // レーダーの位置と向きを更新
+        radar.setPosition(x, y);
+        radar.setAngle(angle);
+        radar.update();
+
+        // SoundPlayer.playRWRLockSound(0); // RWRロック警報ループ再生
         checkCollisions();
         flareManager.updateFlares();
+        chaffManager.updateChaffs();
     }
 
     // ↑キー入力時加速
@@ -185,6 +199,8 @@ public class Player implements Emitter {
             if (!isBeforeZPressed) {
                 flareManager.addFlare(x - Math.cos(angle) * 10, y - Math.sin(angle) * 10, speed - 0.3,
                         Math.atan2(velocityY, velocityX)); // 少し後方からフレアを展開
+                chaffManager.addChaff(x - Math.cos(angle) * 10, y - Math.sin(angle) * 10, speed - 0.3,
+                        Math.atan2(velocityY, velocityX)); // 少し後方からチャフを展開
                 SoundPlayer.playSound("sounds/flare-001.wav", 0, false);
                 isBeforeZPressed = true;
             }
@@ -236,12 +252,22 @@ public class Player implements Emitter {
 
         g2d.setTransform(originalTransform);
 
+        // レーダーを描画
+        radar.draw(g2d);
+
+        // レーダーで取得した反射体の座標を四角で囲む
+        List<Point> reflectors = radar.scanForReflectors();
+        g2d.setColor(new Color(0, 255, 0, 170));
+        for (Point p : reflectors) {
+            g2d.drawRect(p.x - 10, p.y - 10, 20, 20); // 反射体の座標を中心に10x10の四角を描画
+        }
         // ベクトルの向きを描画
         g2d.setColor(Color.GREEN);
         g2d.drawLine((int) x, (int) y, (int) (x + velocityX * 100), (int) (y + velocityY * 100));
 
         // フレアを描画
         flareManager.drawFlares(g2d);
+        chaffManager.drawChaffs(g2d);
     }
 
     private void drawPlayerImage(Graphics2D g2d) {
@@ -327,7 +353,17 @@ public class Player implements Emitter {
 
     @Override
     public double getInfraredEmission() {
-        return infraredEmission;
+        return INFRARED_EMISSION;
+    }
+
+    @Override
+    public double getReflectanceStrength() {
+        return REFLECTOR_STRENGTH;
+    }
+
+    @Override
+    public String getReflectorType() {
+        return "Player";
     }
 
     // ラベルマネージャの設定
