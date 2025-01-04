@@ -3,14 +3,16 @@ import java.util.List;
 
 public class Missile {
     // 定数
+    private static final double DRAG_COEFFICIENT = 0.01; // 抗力係数
+    private static final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
+    private static final double CROSS_SECTIONAL_AREA = 0.04; // 物体の断面積 (m^2)
     private static final double PLAYER_IR_SENSITIVITY = 0.9;
-    private static final double MISSILE_MAX_TURN_RATE = 0.0025;
-    private static final double DELTA_V_OF_BOOSTER = 0.0033;
-    private static final double AIR_RESISTANCE = 0.9995;
+    private static final double MISSILE_MAX_TURN_RATE = 0.0024;
+    private static final double DELTA_V_OF_BOOSTER = 0.0027;
     private static final double IRCCM_SEEKER_FOV = Math.toRadians(2);
     private static final double NORMAL_SEEKER_FOV = Math.toRadians(8);
     private static final int LIFESPAN = 3200;
-    public static final int BURN_TIME_OF_BOOSTER = 1300;
+    public static final int BURN_TIME_OF_BOOSTER = 1100;
 
     // フィールド
     private double x;
@@ -27,6 +29,7 @@ public class Missile {
     private int age;
     private int smokeAge = 0;
     private boolean isCloseSoundPlayed;
+    private boolean isMissileSoundPlayed;
 
     private final EmitterManager emitterManager;
     private final Player player;
@@ -50,6 +53,8 @@ public class Missile {
         this.player = player;
         this.seekerFOV = NORMAL_SEEKER_FOV;
         this.missileLauncher = missileLauncher;
+        this.isCloseSoundPlayed = false;
+        this.isMissileSoundPlayed = false;
     }
 
     // 更新メソッド
@@ -142,7 +147,7 @@ public class Missile {
                 double deltaX = SACLOSTargetX - x;
                 double deltaY = SACLOSTargetY - y;
                 angleDifference = MathUtils.normalizeAngle(Math.atan2(deltaY, deltaX), angle) * 0.0011;
-                System.out.println(angleDifference);
+
             }
         }
 
@@ -152,28 +157,43 @@ public class Missile {
 
     // ミサイルの座標を更新
     private void updatePosition() {
+        double acc = 0;
+        double dragForce = 0.5 * DRAG_COEFFICIENT * AIR_DENSITY * CROSS_SECTIONAL_AREA * speed * speed;
         // ブースター燃焼中は加速
         if (age <= BURN_TIME_OF_BOOSTER) {
-            speed += DELTA_V_OF_BOOSTER;
+            acc = DELTA_V_OF_BOOSTER;
         }
-
-        speed *= (1 - Math.abs(angleDifference) * 0.4); // 旋回すると減速
-        speed *= AIR_RESISTANCE;
+        acc = acc - dragForce;
+        speed += acc;
+        speed *= (1 - Math.abs(angleDifference) * 0.1); // 旋回すると減速
 
         x += Math.cos(angle) * speed;
         y += Math.sin(angle) * speed;
     }
 
     private void updateSound() {
-        boolean isCloseFromPlayer = player.distanceFromPlayer(x, y) < 70;
+        double distFromPlayer = player.distanceFromPlayer(x, y);
+
+        // プレイヤーとの速度差を計算
+        double deltaX = player.getVelocityX() - Math.cos(angle) * speed;
+        double deltaY = player.getVelocityY() - Math.sin(angle) * speed;
+        double relativeSpeed = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
         // 近距離で風切り音を再生
-        if (isCloseFromPlayer && !isCloseSoundPlayed) {
+        if (distFromPlayer <= 70 && !isCloseSoundPlayed) {
             String sound = speed < 1.8 ? "sounds/rocket_fly_by-007.wav" : "sounds/missile_sonic_boom-001.wav"; // 速度が1.8未満か否かで二種類の風切り音を切り替え
             SoundPlayer.playSound(sound, 0, false);
             isCloseSoundPlayed = true;
-        } else if (!isCloseFromPlayer) {
+        } else if (distFromPlayer > 70) {
             isCloseSoundPlayed = false;
+        }
+
+        // 相対速度が大きい場合にのみ音を再生
+        if (distFromPlayer <= 180 && !isMissileSoundPlayed && relativeSpeed > 2) {
+            SoundPlayer.playSound("sounds/rocket_fly_by-004.wav", 0, false);
+            isMissileSoundPlayed = true;
+        } else if (distFromPlayer > 180) {
+            isMissileSoundPlayed = false;
         }
     }
 

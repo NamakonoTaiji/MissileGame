@@ -37,7 +37,6 @@ public class Player implements Emitter {
     private BufferedImage playerImage;
     private int imageWidth;
     private int imageHeight;
-    private double scale;
     private double dragForce = 0;
     private double liftForce = 0;
     private List<Missile> missiles;
@@ -62,7 +61,6 @@ public class Player implements Emitter {
         this.velocityX = Math.cos(angle) * speed;
         this.velocityY = Math.sin(angle) * speed;
         this.flareManager = new FlareManager(emitterManager);
-        this.scale = scale;
 
         // 画像を読み込む
         try {
@@ -74,7 +72,7 @@ public class Player implements Emitter {
         }
 
         // エンジン音ループ再生
-        SoundPlayer.playEngineSound("sounds/engine_66_exterior.wav", 1, true);
+        SoundPlayer.playEngineSound("sounds/engine_66_exterior.wav", 0, true);
     }
 
     // プレイヤーの更新

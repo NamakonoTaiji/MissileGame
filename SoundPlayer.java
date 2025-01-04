@@ -1,6 +1,5 @@
 import javax.sound.sampled.*;
 import java.io.File;
-import java.io.IOException;
 
 public class SoundPlayer {
     private static Clip engineClip;
@@ -16,11 +15,9 @@ public class SoundPlayer {
             // 音量を調整
             FloatControl volumeControl = (FloatControl) clip.getControl(FloatControl.Type.MASTER_GAIN);
             volumeControl.setValue(volume); // 音量をデシベル単位で設定
-
             if (loop) {
                 clip.loop(Clip.LOOP_CONTINUOUSLY);
             }
-
             clip.start();
         } catch (Exception e) {
             e.printStackTrace();

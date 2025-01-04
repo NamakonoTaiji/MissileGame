@@ -49,7 +49,8 @@ public class MissileLauncher {
     public void launchMissile() {
         double distanceFromPlayer = player.distanceFromPlayer(x, y);
         if (isLoaded) {
-            Missile missile = new Missile(x, y, launchSpeed, launcherToTargetAngle, navigationMode, emitterManager,
+            Missile missile = new Missile(x + LAUNCHER_WIDTH / 2, y + LAUNCHER_HEIGHT / 2, launchSpeed,
+                    launcherToTargetAngle, navigationMode, emitterManager,
                     player, this);
             missiles.add(missile);
             if (distanceFromPlayer <= 1600) {
