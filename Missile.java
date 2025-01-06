@@ -8,11 +8,11 @@ public class Missile {
     private static final double CROSS_SECTIONAL_AREA = 0.04; // 物体の断面積 (m^2)
     private static final double PLAYER_IR_SENSITIVITY = 0.9;
     private static final double MISSILE_MAX_TURN_RATE = 0.0024;
-    private static final double DELTA_V_OF_BOOSTER = 0.0027;
-    private static final double IRCCM_SEEKER_FOV = Math.toRadians(2);
-    private static final double NORMAL_SEEKER_FOV = Math.toRadians(8);
-    private static final int LIFESPAN = 3200;
-    public static final int BURN_TIME_OF_BOOSTER = 1100;
+    private static final double DELTA_V_OF_BOOSTER = 0.0032;
+    private static final double IRCCM_SEEKER_FOV = Math.toRadians(5);
+    private static final double NORMAL_SEEKER_FOV = Math.toRadians(5);
+    private static final int LIFESPAN = 3900;
+    public static final int BURN_TIME_OF_BOOSTER = 1600;
 
     // フィールド
     private double x;
@@ -146,7 +146,7 @@ public class Missile {
                         + Math.sin(missileLauncher.getLauncherToTargetAngle()) * distFromMissileLauncher;
                 double deltaX = SACLOSTargetX - x;
                 double deltaY = SACLOSTargetY - y;
-                angleDifference = MathUtils.normalizeAngle(Math.atan2(deltaY, deltaX), angle) * 0.0011;
+                angleDifference = MathUtils.normalizeAngle(Math.atan2(deltaY, deltaX), angle) * 0.0015;
 
             }
         }
@@ -165,7 +165,7 @@ public class Missile {
         }
         acc = acc - dragForce;
         speed += acc;
-        speed *= (1 - Math.abs(angleDifference) * 0.1); // 旋回すると減速
+        speed *= (1 - Math.abs(angleDifference) * 0.2); // 旋回すると減速
 
         x += Math.cos(angle) * speed;
         y += Math.sin(angle) * speed;
@@ -188,11 +188,11 @@ public class Missile {
             isCloseSoundPlayed = false;
         }
 
-        // 相対速度が大きい場合にのみ音を再生
-        if (distFromPlayer <= 180 && !isMissileSoundPlayed && relativeSpeed > 2) {
+        // 相対速度が大きい場合にのみrocket_fly_by-004.wavを再生
+        if (distFromPlayer <= 140 && !isMissileSoundPlayed && relativeSpeed > 2) {
             SoundPlayer.playSound("sounds/rocket_fly_by-004.wav", 0, false);
             isMissileSoundPlayed = true;
-        } else if (distFromPlayer > 180) {
+        } else if (distFromPlayer > 140) {
             isMissileSoundPlayed = false;
         }
     }

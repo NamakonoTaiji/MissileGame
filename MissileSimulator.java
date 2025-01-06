@@ -28,6 +28,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
     private Timer timer;
     private List<Missile> missiles;
     private SmokeTrail smokeTrail;
+    private RWRManager rwrManager;
 
     // コンストラクタ
     public MissileSimulator() {
@@ -42,13 +43,15 @@ public class MissileSimulator extends JPanel implements KeyListener {
         addKeyListener(this);
 
         scale = INITIAL_SCALE;
+        rwrManager = new RWRManager();
         emitterManager = new EmitterManager();
         reflectorManager = new ReflectorManager();
-        player = new Player(200.0, 200.0, 0.4, emitterManager, reflectorManager, scale);
+        player = new Player(200.0, 200.0, 0.4, emitterManager, reflectorManager, scale, rwrManager);
         emitterManager.addEmitter(player);
         reflectorManager.addReflector(player);
 
-        missileLauncher = new MissileLauncher(150, 150, 0.0, 100, emitterManager, player);
+        missileLauncher = new MissileLauncher("SAM1", 150, 150, 0.0, 100, emitterManager, reflectorManager, player,
+                rwrManager);
         flareManager = new FlareManager(emitterManager);
         chaffManager = new ChaffManager(reflectorManager);
         labelManager = new LabelManager(this);
@@ -81,21 +84,21 @@ public class MissileSimulator extends JPanel implements KeyListener {
     public void update() {
         missiles = missileLauncher.getMissiles();
         player.update(missiles, labelManager);
-        missileLauncher.updateMissiles();
+        missileLauncher.updateMissileLauncher();
         flareManager.updateFlares();
         chaffManager.updateChaffs();
         emitterManager.updateEmitters();
         reflectorManager.updateReflectors();
         smokeTrail.update();
-
+        SoundPlayer.updateRWRSound();
         generateSmokeTrail();
     }
 
     private void generateSmokeTrail() {
         synchronized (missiles) {
             for (Missile missile : missiles) {
-                double smokeAddDeley = MathUtils.clamp(-3.5 * missile.getSpeed() + 10, 2, 60);
-                if (missile.getAge() - missile.getSmokeAddTime() >= smokeAddDeley
+                double smokeAddDelay = MathUtils.clamp(-3.5 * missile.getSpeed() + 10, 2, 60);
+                if (missile.getAge() - missile.getSmokeAddTime() >= smokeAddDelay
                         && missile.getAge() <= Missile.BURN_TIME_OF_BOOSTER) {
                     smokeTrail.addParticle(missile.getX(), missile.getY());
                     missile.setSmokeAddTime(missile.getAge());

@@ -1,5 +1,4 @@
 public interface Reflector {
-    String getReflectorType();
 
     String getSourceType();
 

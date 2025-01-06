@@ -64,9 +64,4 @@ public class Chaff implements Reflector {
     public double getReflectanceStrength() {
         return REFLECTOR_STRENGTH;
     }
-
-    @Override
-    public String getReflectorType() {
-        return "Chaff";
-    }
 }

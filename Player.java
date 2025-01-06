@@ -1,13 +1,13 @@
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.util.List;
 import java.io.IOException;
 import java.io.File;
-import java.util.List;
 import java.util.Iterator;
 import java.util.Random;
 import javax.imageio.ImageIO;
+import java.util.List;
+import java.util.ArrayList;
 
 public class Player implements Emitter, Reflector {
     // 定数
@@ -22,10 +22,9 @@ public class Player implements Emitter, Reflector {
     private static final double CROSS_SECTIONAL_AREA = 20; // 物体の断面積 (m^2)
     private static final double INFRARED_EMISSION = 1.0;
     public static final double REFLECTOR_STRENGTH = 1.0;
+    private final String TEAM = "Alpha";
 
     // フィールド
-    private final String team = "Alpha";
-    private Radar radar;
     private double x;
     private double y;
     private double angle; // 機体の向き
@@ -50,7 +49,10 @@ public class Player implements Emitter, Reflector {
     private Random random = new Random();
     private boolean mach = false;
     private boolean isSonicBoomed = false;
+    private Radar radar;
+    private List<Radar> radars = new ArrayList<>();
 
+    private RWRManager rwrManager;
     // 被弾音ファイルのリスト
     private String[] hitSounds = {
             "sounds/module_damaged/module_damage-001.wav",
@@ -60,7 +62,7 @@ public class Player implements Emitter, Reflector {
 
     // コンストラクタ
     public Player(double x, double y, double speed, EmitterManager emitterManager,
-            ReflectorManager reflectorManager, double scale) {
+            ReflectorManager reflectorManager, double scale, RWRManager rwrManager) {
         this.x = x;
         this.y = y;
         this.speed = speed;
@@ -69,7 +71,10 @@ public class Player implements Emitter, Reflector {
         this.velocityY = Math.sin(angle) * speed;
         this.flareManager = new FlareManager(emitterManager);
         this.chaffManager = new ChaffManager(reflectorManager);
-        this.radar = new Radar(team, "SRC", true, reflectorManager, x, y, angle);
+        this.radar = new Radar("Player", TEAM, "SWEEP", true, reflectorManager, x + Math.cos(angle) * 10,
+                y + Math.sin(angle) * 10, angle, rwrManager);
+        this.rwrManager = rwrManager;
+
         // 画像を読み込む
         try {
             playerImage = ImageIO.read(new File("images/F-2.png"));
@@ -111,11 +116,34 @@ public class Player implements Emitter, Reflector {
         handleFlare();
 
         // レーダーの位置と向きを更新
-        radar.setPosition(x, y);
         radar.setAngle(angle);
-        radar.update();
+        radar.update("SWEEP", x + Math.cos(angle) * 10,
+                y + Math.sin(angle) * 10);
 
-        // SoundPlayer.playRWRLockSound(0); // RWRロック警報ループ再生
+        boolean isRWRLaunch = false;
+        boolean isRWRTrack = false;
+        boolean isRWRSearch = false;
+
+        // レーダーRWR警告音再生
+        for (Radar radar : radars) {
+            if ("Player".equals(radar.getDetectionTargetType())) {
+                switch (radar.getDetectionRadarMode()) {
+                    case "Launch" -> {
+                        isRWRLaunch = true;
+                        break;
+                    }
+                    case "Track" -> {
+                        isRWRTrack = true;
+                        break;
+                    }
+                    case "CLOCKWISE" -> {
+                        isRWRTrack = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         checkCollisions();
         flareManager.updateFlares();
         chaffManager.updateChaffs();
@@ -261,6 +289,7 @@ public class Player implements Emitter, Reflector {
         for (Point p : reflectors) {
             g2d.drawRect(p.x - 10, p.y - 10, 20, 20); // 反射体の座標を中心に10x10の四角を描画
         }
+
         // ベクトルの向きを描画
         g2d.setColor(Color.GREEN);
         g2d.drawLine((int) x, (int) y, (int) (x + velocityX * 100), (int) (y + velocityY * 100));
@@ -359,11 +388,6 @@ public class Player implements Emitter, Reflector {
     @Override
     public double getReflectanceStrength() {
         return REFLECTOR_STRENGTH;
-    }
-
-    @Override
-    public String getReflectorType() {
-        return "Player";
     }
 
     // ラベルマネージャの設定

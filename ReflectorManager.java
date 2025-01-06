@@ -10,12 +10,10 @@ public class ReflectorManager {
     }
 
     public void addReflector(Reflector reflector) {
-        System.out.println("Adding reflector");
         reflectors.add(reflector);
     }
 
     public void removeReflector(Reflector reflector) {
-        System.out.println("Removing reflector");
         synchronized (reflectors) {
             reflectors.remove(reflector);
         }

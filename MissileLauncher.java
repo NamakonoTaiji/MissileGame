@@ -11,6 +11,7 @@ public class MissileLauncher {
     private static final int LAUNCHER_WIDTH = 30;
     private static final int LAUNCHER_HEIGHT = 10;
     private static final int LAUNCHER_ARM_LENGTH = 15;
+    private final String TEAM = "Beta";
 
     // フィールド
     private double x;
@@ -24,10 +25,15 @@ public class MissileLauncher {
     private List<Missile> missiles;
     private EmitterManager emitterManager;
     private Player player;
+    private Radar radar;
+    private String id;
+    private String radarMode = "CLOCKWISE";
 
     // コンストラクタ
-    public MissileLauncher(double x, double y, double launchSpeed, double reloadTime, EmitterManager emitterManager,
-            Player player) {
+    public MissileLauncher(String id, double x, double y, double launchSpeed, double reloadTime,
+            EmitterManager emitterManager,
+            ReflectorManager reflectorManager,
+            Player player, RWRManager rwrManager) {
         this.x = x;
         this.y = y;
         this.isLoaded = false;
@@ -38,11 +44,8 @@ public class MissileLauncher {
         this.missiles = Collections.synchronizedList(new ArrayList<>());
         this.emitterManager = emitterManager;
         this.player = player;
-    }
-
-    // ミサイルのロード
-    public void loadMissile() {
-        // 必要に応じて実装
+        this.radar = new Radar("SAM1", TEAM, this.radarMode, true, reflectorManager, x, y, 0, rwrManager);
+        this.id = id;
     }
 
     // ミサイルの発射
@@ -72,9 +75,14 @@ public class MissileLauncher {
     }
 
     // ミサイルの更新
-    public void updateMissiles() {
+    public void updateMissileLauncher() {
         reloadMissile();
         updateMissileList();
+
+        // レーダーの位置と向きを更新
+        radar.setAngle(0);
+        radar.update("CLOCKWISE", x + LAUNCHER_WIDTH / 2, y + LAUNCHER_HEIGHT / 2);
+        radar.scanForReflectors();
     }
 
     private void reloadMissile() {
@@ -102,6 +110,8 @@ public class MissileLauncher {
 
     // 発射台とミサイルの描画
     public void draw(Graphics g, double targetX, double targetY) {
+        // レーダーを描画
+        radar.draw(g);
         updateLauncherAngle(targetX, targetY);
         drawLauncher(g);
         drawMissiles(g);
@@ -115,12 +125,11 @@ public class MissileLauncher {
         g.setColor(LAUNCHER_COLOR);
         g.drawRect((int) x, (int) y, LAUNCHER_WIDTH, LAUNCHER_HEIGHT);
 
-        double drawLauncherArmLength = LAUNCHER_ARM_LENGTH;
         // SACLOS誘導時LOS描画
+        double drawLauncherArmLength = LAUNCHER_ARM_LENGTH;
         if (navigationMode.equals("SACLOS")) {
             drawLauncherArmLength *= 1000;
         }
-
         g.drawLine((int) x + LAUNCHER_WIDTH / 2, (int) y + LAUNCHER_HEIGHT / 2,
                 (int) ((x + LAUNCHER_WIDTH / 2) + drawLauncherArmLength * Math.cos(launcherToTargetAngle)),
                 (int) ((y + LAUNCHER_HEIGHT / 2) + drawLauncherArmLength * Math.sin(launcherToTargetAngle)));
@@ -165,7 +174,8 @@ public class MissileLauncher {
     }
 
     public double distanceFromMissileLauncher(double targetX, double targetY) {
-        return Math.sqrt(Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
+        return Math.sqrt(
+                Math.pow(targetX - (x + LAUNCHER_WIDTH / 2), 2) + Math.pow(targetY - (y + LAUNCHER_HEIGHT / 2), 2));
     }
 
     public List<Missile> getMissiles() {
@@ -173,10 +183,10 @@ public class MissileLauncher {
     }
 
     public double getX() {
-        return x;
+        return x + LAUNCHER_WIDTH / 2;
     }
 
     public double getY() {
-        return y;
+        return y + LAUNCHER_HEIGHT / 2;
     }
 }
