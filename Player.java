@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.Random;
 import javax.imageio.ImageIO;
 import java.util.List;
-import java.util.ArrayList;
 
 public class Player implements Emitter, Reflector {
     // 定数
@@ -50,9 +49,7 @@ public class Player implements Emitter, Reflector {
     private boolean mach = false;
     private boolean isSonicBoomed = false;
     private Radar radar;
-    private List<Radar> radars = new ArrayList<>();
 
-    private RWRManager rwrManager;
     // 被弾音ファイルのリスト
     private String[] hitSounds = {
             "sounds/module_damaged/module_damage-001.wav",
@@ -73,7 +70,6 @@ public class Player implements Emitter, Reflector {
         this.chaffManager = new ChaffManager(reflectorManager);
         this.radar = new Radar("Player", TEAM, "SWEEP", true, reflectorManager, x + Math.cos(angle) * 10,
                 y + Math.sin(angle) * 10, angle, rwrManager);
-        this.rwrManager = rwrManager;
 
         // 画像を読み込む
         try {
@@ -119,30 +115,6 @@ public class Player implements Emitter, Reflector {
         radar.setAngle(angle);
         radar.update("SWEEP", x + Math.cos(angle) * 10,
                 y + Math.sin(angle) * 10);
-
-        boolean isRWRLaunch = false;
-        boolean isRWRTrack = false;
-        boolean isRWRSearch = false;
-
-        // レーダーRWR警告音再生
-        for (Radar radar : radars) {
-            if ("Player".equals(radar.getDetectionTargetType())) {
-                switch (radar.getDetectionRadarMode()) {
-                    case "Launch" -> {
-                        isRWRLaunch = true;
-                        break;
-                    }
-                    case "Track" -> {
-                        isRWRTrack = true;
-                        break;
-                    }
-                    case "CLOCKWISE" -> {
-                        isRWRTrack = true;
-                        break;
-                    }
-                }
-            }
-        }
 
         checkCollisions();
         flareManager.updateFlares();

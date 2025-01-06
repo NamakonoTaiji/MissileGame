@@ -81,16 +81,25 @@ public class Radar {
                         rwrManager.updateOrAddRWRInfo(this);
                     }
                 }
-            } else {
-                List<RWRInfo> rwrInfos = new CopyOnWriteArrayList<>(rwrManager.getRWRInfos());
-                for (RWRInfo rwrInfo : rwrInfos) {
-                    if (rwrInfo.getID().equals(this.id)) {
-                        rwrManager.removeRWRInfo(rwrInfo);
-                    }
+            }
+        }
+
+        List<RWRInfo> rwrInfos = new CopyOnWriteArrayList<>(rwrManager.getRWRInfos());
+        for (RWRInfo rwrInfo : rwrInfos) {
+            double rwrDx = rwrInfo.getX() - this.x;
+            double rwrDy = rwrInfo.getY() - this.y;
+            double rwrDistance = Math.sqrt(rwrDx * rwrDx + rwrDy * rwrDy);
+            double rwrAngleToReflector = Math.atan2(rwrDy, rwrDx);
+
+            if (rwrDistance > radarRange
+                    || Math.abs(MathUtils.normalizeAngle(rwrAngleToReflector,
+                            MathUtils.normalizeAngle(angle, this.currentAngle))) > radarFOV / 2) {
+                if (rwrInfo.getID().equals(this.id)) {
+                    rwrManager.removeRWRInfo(rwrInfo);
                 }
             }
         }
-        // List<RWRInfo> rwrInfos = rwrManager.getRWRInfos();
+
         // System.out.println(rwrInfos.size()); // デバッグ用...RWRInfoの数を表示
         return detectedReflectors;
     }

@@ -10,7 +10,8 @@ public class SoundPlayer {
     private static Clip rwrContactClip;
     private static Clip rwrLaunchAlertClip;
     private static Clip rwrMissileIncomingClip;
-    private static int rwrSoundPlayTime = SOUND_PLAY_MIN_TIME;
+    private static int rwrLaunchSoundPlayTime = SOUND_PLAY_MIN_TIME;
+    private static int rwrTrackSoundPlayTime = SOUND_PLAY_MIN_TIME;
     private static boolean isLaunch = false;
     private static boolean isTrack = false;
     private static boolean isContact = false;
@@ -71,22 +72,24 @@ public class SoundPlayer {
     }
 
     public static synchronized void updateRWRSound() {
-        if (rwrSoundPlayTime < SOUND_PLAY_MIN_TIME && isLaunch) {
+        if (rwrLaunchSoundPlayTime < SOUND_PLAY_MIN_TIME || isLaunch) {
             playRWRLaunchSound(-5);
-        } else if (rwrSoundPlayTime < SOUND_PLAY_MIN_TIME && isTrack) {
+        } else if (rwrTrackSoundPlayTime < SOUND_PLAY_MIN_TIME || isTrack) {
+            System.out.println(rwrTrackSoundPlayTime);
             playRWRTrackSound(-5);
-        } else if (rwrSoundPlayTime < SOUND_PLAY_MIN_TIME && isContact) {
+        } else if (isContact) {
             playRWRContactSound(-5);
         }
 
-        if (rwrSoundPlayTime >= SOUND_PLAY_MIN_TIME) {
+        if (rwrLaunchSoundPlayTime >= SOUND_PLAY_MIN_TIME) {
             stopRWRLaunchSound();
+        }
+        if (rwrTrackSoundPlayTime >= SOUND_PLAY_MIN_TIME) {
             stopRWRTrackSound();
-            stopRWRLaunchAlertSound();
-            isContactSoundPlayed = false;
         }
 
-        rwrSoundPlayTime++;
+        rwrLaunchSoundPlayTime++;
+        rwrTrackSoundPlayTime++;
     }
 
     public static synchronized void playRWRSound(float volume, String detectionRadarMode) {
@@ -95,12 +98,14 @@ public class SoundPlayer {
         isContact = false;
         if (detectionRadarMode.equals("Launch")) {
             isLaunch = true;
+            rwrLaunchSoundPlayTime = 0;
         } else if (detectionRadarMode.equals("Track")) {
             isTrack = true;
+            rwrTrackSoundPlayTime = 0;
         } else {
             isContact = true;
         }
-        rwrSoundPlayTime = 0;
+
         updateRWRSound();
     }
 
@@ -108,7 +113,7 @@ public class SoundPlayer {
         try {
             // 発射探知警報が再生されていない場合のみ再生
             if (!isLaunchSoundPlayed && (rwrLaunchAlertClip == null || !rwrLaunchAlertClip.isRunning())) {
-
+                System.out.println("Launch");
                 File soundFile = new File("sounds/RWR/missile_launch.wav");
                 AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(soundFile);
                 rwrLaunchAlertClip = AudioSystem.getClip();
@@ -132,6 +137,7 @@ public class SoundPlayer {
         try {
             // レーダー照射警報が再生されていない場合のみ再生
             if (!isTrackSoundPlayed && (rwrTrackClip == null || !rwrTrackClip.isRunning())) {
+                System.out.println("Track");
                 File soundFile = new File("sounds/RWR/radar_lock.wav");
                 AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(soundFile);
                 rwrTrackClip = AudioSystem.getClip();
@@ -155,6 +161,7 @@ public class SoundPlayer {
         try {
             // レーダーコンタクト警報が再生されていない場合のみ再生
             if (!isContactSoundPlayed && (rwrContactClip == null || !rwrContactClip.isRunning())) {
+                System.out.println("Contact");
                 File soundFile = new File("sounds/RWR/contact.wav");
                 AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(soundFile);
                 rwrContactClip = AudioSystem.getClip();
@@ -178,6 +185,7 @@ public class SoundPlayer {
         if (rwrLaunchAlertClip != null && rwrLaunchAlertClip.isRunning()) {
             rwrLaunchAlertClip.stop();
             rwrLaunchAlertClip.close();
+            isLaunch = false;
             isLaunchSoundPlayed = false;
         }
     }
@@ -186,6 +194,7 @@ public class SoundPlayer {
         if (rwrTrackClip != null && rwrTrackClip.isRunning()) {
             rwrTrackClip.stop();
             rwrTrackClip.close();
+            isTrack = false;
             isTrackSoundPlayed = false;
         }
     }

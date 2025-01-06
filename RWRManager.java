@@ -15,7 +15,7 @@ public class RWRManager {
         ;
     }
 
-    public void updateOrAddRWRInfo(Radar radar) {
+    public synchronized void updateOrAddRWRInfo(Radar radar) {
         boolean isUpdate = false;
         RWRInfo newRWRInfo = new RWRInfo(radar);
         synchronized (rwrInfos) {
@@ -33,7 +33,7 @@ public class RWRManager {
         }
     }
 
-    public void removeRWRInfo(RWRInfo rwr) {
+    public synchronized void removeRWRInfo(RWRInfo rwr) {
         synchronized (rwrInfos) {
             rwrInfos.remove(rwr);
         }
@@ -45,20 +45,8 @@ public class RWRManager {
         }
     }
 
-    public String getDetectionRadarMode() {
-        return detectionRadarMode;
-    }
-
     public void setDetectionRadarMode(String detectionRadarMode) {
         this.detectionRadarMode = detectionRadarMode;
-    }
-
-    public String getDetectionTargetType() {
-        return detectionTargetType;
-    }
-
-    public List<double[]> getRadarCoordinates() {
-        return radarCoordinates;
     }
 
     public double getReceiverStrength() {

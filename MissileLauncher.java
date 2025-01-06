@@ -25,7 +25,8 @@ public class MissileLauncher {
     private List<Missile> missiles;
     private EmitterManager emitterManager;
     private Player player;
-    private Radar radar;
+    private Radar searchRadar;
+    private Radar trackRadar;
     private String id;
     private String radarMode = "CLOCKWISE";
 
@@ -44,7 +45,8 @@ public class MissileLauncher {
         this.missiles = Collections.synchronizedList(new ArrayList<>());
         this.emitterManager = emitterManager;
         this.player = player;
-        this.radar = new Radar("SAM1", TEAM, this.radarMode, true, reflectorManager, x, y, 0, rwrManager);
+        this.searchRadar = new Radar("SAM1_Search", TEAM, this.radarMode, true, reflectorManager, x, y, 0, rwrManager);
+        this.trackRadar = new Radar("SAM1_Track", TEAM, "Track", true, reflectorManager, x, y, 0, rwrManager);
         this.id = id;
     }
 
@@ -52,7 +54,7 @@ public class MissileLauncher {
     public void launchMissile() {
         double distanceFromPlayer = player.distanceFromPlayer(x, y);
         if (isLoaded) {
-            Missile missile = new Missile(x + LAUNCHER_WIDTH / 2, y + LAUNCHER_HEIGHT / 2, launchSpeed,
+            Missile missile = new Missile(x, y, launchSpeed,
                     launcherToTargetAngle, navigationMode, emitterManager,
                     player, this);
             missiles.add(missile);
@@ -80,9 +82,13 @@ public class MissileLauncher {
         updateMissileList();
 
         // レーダーの位置と向きを更新
-        radar.setAngle(0);
-        radar.update("CLOCKWISE", x + LAUNCHER_WIDTH / 2, y + LAUNCHER_HEIGHT / 2);
-        radar.scanForReflectors();
+        searchRadar.setAngle(0);
+        searchRadar.update("CLOCKWISE", x, y);
+        searchRadar.scanForReflectors();
+
+        trackRadar.setAngle(launcherToTargetAngle);
+        trackRadar.update("Track", x, y);
+        trackRadar.scanForReflectors();
     }
 
     private void reloadMissile() {
@@ -111,28 +117,29 @@ public class MissileLauncher {
     // 発射台とミサイルの描画
     public void draw(Graphics g, double targetX, double targetY) {
         // レーダーを描画
-        radar.draw(g);
+        searchRadar.draw(g);
+        trackRadar.draw(g);
         updateLauncherAngle(targetX, targetY);
         drawLauncher(g);
         drawMissiles(g);
     }
 
     private void updateLauncherAngle(double targetX, double targetY) {
-        launcherToTargetAngle = Math.atan2((targetY - (y + LAUNCHER_HEIGHT / 2)), (targetX - (x + LAUNCHER_WIDTH / 2)));
+        launcherToTargetAngle = Math.atan2((targetY - y), (targetX - x));
     }
 
     private void drawLauncher(Graphics g) {
         g.setColor(LAUNCHER_COLOR);
-        g.drawRect((int) x, (int) y, LAUNCHER_WIDTH, LAUNCHER_HEIGHT);
+        g.drawRect((int) x - LAUNCHER_WIDTH / 2, (int) y - LAUNCHER_HEIGHT / 2, LAUNCHER_WIDTH, LAUNCHER_HEIGHT);
 
         // SACLOS誘導時LOS描画
         double drawLauncherArmLength = LAUNCHER_ARM_LENGTH;
         if (navigationMode.equals("SACLOS")) {
             drawLauncherArmLength *= 1000;
         }
-        g.drawLine((int) x + LAUNCHER_WIDTH / 2, (int) y + LAUNCHER_HEIGHT / 2,
-                (int) ((x + LAUNCHER_WIDTH / 2) + drawLauncherArmLength * Math.cos(launcherToTargetAngle)),
-                (int) ((y + LAUNCHER_HEIGHT / 2) + drawLauncherArmLength * Math.sin(launcherToTargetAngle)));
+        g.drawLine((int) x, (int) y,
+                (int) (x + drawLauncherArmLength * Math.cos(launcherToTargetAngle)),
+                (int) (y + drawLauncherArmLength * Math.sin(launcherToTargetAngle)));
     }
 
     private void drawMissiles(Graphics g) {
@@ -175,7 +182,7 @@ public class MissileLauncher {
 
     public double distanceFromMissileLauncher(double targetX, double targetY) {
         return Math.sqrt(
-                Math.pow(targetX - (x + LAUNCHER_WIDTH / 2), 2) + Math.pow(targetY - (y + LAUNCHER_HEIGHT / 2), 2));
+                Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
     }
 
     public List<Missile> getMissiles() {
@@ -183,10 +190,10 @@ public class MissileLauncher {
     }
 
     public double getX() {
-        return x + LAUNCHER_WIDTH / 2;
+        return x;
     }
 
     public double getY() {
-        return y + LAUNCHER_HEIGHT / 2;
+        return y;
     }
 }
