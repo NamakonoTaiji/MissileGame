@@ -1,3 +1,5 @@
+// プレイヤーのクラス
+
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -9,16 +11,16 @@ import java.util.List;
 public class Player implements Emitter, Reflector {
     // 定数
     private static final int ARROW_SIZE = 6;
-    private static final int IMAGE_REDUCTION = 20;
-    private static final double AOA_MAX = 0.0030;
-    private static final double ENGINE_POWER = 4;
-    private static final double MASS = 15000;
+    private static final int IMAGE_REDUCTION = 20; // 画像の縮小率
+    private static final double AOA_MAX = 0.0030; // 最大迎角
+    private static final double ENGINE_POWER = 4; // エンジン出力
+    private static final double MASS = 15000; // 機体の質量
     private static final double DRAG_COEFFICIENT = 0.16; // 抗力係数
     private static final double LIFT_COEFFICIENT = 0.5; // 揚力係数
     private static final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
     private static final double CROSS_SECTIONAL_AREA = 20; // 物体の断面積 (m^2)
-    private static final double INFRARED_EMISSION = 1.0;
-    public static final double REFLECTOR_STRENGTH = 1.1;
+    private static final double INFRARED_EMISSION = 1.0; // 赤外線放射強度
+    public static final double REFLECTOR_STRENGTH = 1.1; // レーダー反射強度
     private final String TEAM = "Alpha";
 
     // フィールド
@@ -26,20 +28,20 @@ public class Player implements Emitter, Reflector {
     private double y;
     private double angle; // 機体の向き
     private double speed;
-    private double velocityX; // ベクトルのX成分
-    private double velocityY; // ベクトルのY成分
+    private double velocityX;
+    private double velocityY;
+    private double dragForce = 0;
+    private double liftForce = 0;
+    private int imageWidth;
+    private int imageHeight;
     private boolean upPressed;
     private boolean leftPressed;
     private boolean rightPressed;
     private boolean isBeforeZPressed = false;
-    private boolean zPressed;
+    private boolean isZKeyPressed;
     private FlareManager flareManager;
     private ChaffManager chaffManager;
     private BufferedImage playerImage;
-    private int imageWidth;
-    private int imageHeight;
-    private double dragForce = 0;
-    private double liftForce = 0;
     private boolean mach = false;
     private boolean isSonicBoomed = false;
     private Radar radar;
@@ -111,6 +113,7 @@ public class Player implements Emitter, Reflector {
         return upPressed ? ENGINE_POWER / MASS : 0; // エンジン稼働時の加速度
     }
 
+    // 旋回操作
     private double handleTurning(double adjustmentFactorConst) {
         double rudderRock = MathUtils.clamp(-0.5 * speed + 1.45, 0.1, 1); // 高速域舵ロック
         double turnRate = MathUtils.clamp(1 - Math.abs(speed - 0.8) / 0.5, 0.3, 1); // 適正旋回速度の再現
@@ -143,6 +146,7 @@ public class Player implements Emitter, Reflector {
                 + turningAdditionalDrag) / MASS;
     }
 
+    // 速度ベクトルの更新
     private void updateVelocity(double adjustmentFactorConst) {
         double velocityMagnitude = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
         double normalizedVelocityX = velocityX / velocityMagnitude;
@@ -180,7 +184,7 @@ public class Player implements Emitter, Reflector {
 
     // フレア生成
     private void handleFlare() {
-        if (zPressed) {
+        if (isZKeyPressed) {
             if (!isBeforeZPressed) {
                 flareManager.addFlare(x - Math.cos(angle) * 10, y - Math.sin(angle) * 10, speed - 0.3,
                         Math.atan2(velocityY, velocityX)); // 少し後方からフレアを展開
@@ -238,6 +242,7 @@ public class Player implements Emitter, Reflector {
         g2d.drawImage(playerImage, drawX, drawY, imageWidth, imageHeight, null);
     }
 
+    // プレイヤーの形状を描画
     private void drawPlayerShape(Graphics2D g2d) {
         g2d.setColor(Color.RED);
         g2d.translate((int) x, (int) y);
@@ -260,7 +265,7 @@ public class Player implements Emitter, Reflector {
     }
 
     public void setZPressed(boolean zPressed) {
-        this.zPressed = zPressed;
+        this.isZKeyPressed = zPressed;
     }
 
     // ゲッターメソッド
@@ -288,10 +293,11 @@ public class Player implements Emitter, Reflector {
         return liftForce;
     }
 
-    public double distanceFromPlayer(double targetX, double targetY) {
+    public double getDistanceFromPlayer(double targetX, double targetY) {
         return Math.sqrt(Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
     }
 
+    // インターフェースの実装
     @Override
     public String getSourceType() {
         return "Player";

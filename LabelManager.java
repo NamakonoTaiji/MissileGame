@@ -1,14 +1,18 @@
+// ラベルの管理クラス
+
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class LabelManager {
+    // フィールド
     private JPanel panel;
     private List<JLabel> labels;
     private JTextArea logTextArea;
     private JScrollPane scrollPane;
 
+    // コンストラクタ
     public LabelManager(JPanel panel) {
         this.panel = panel;
         this.labels = new ArrayList<>();
@@ -43,6 +47,7 @@ public class LabelManager {
         });
     }
 
+    // ラベルの追加
     public void addLabel(String text, int x, int y, int width, int height) {
         JLabel label = new JLabel();
         label.setText(text);
@@ -55,6 +60,7 @@ public class LabelManager {
         panel.repaint();
     }
 
+    // ラベルの更新
     public void updateLabel(int index, String text) {
         if (index >= 0 && index < labels.size()) {
             labels.get(index).setText(text);
@@ -62,6 +68,7 @@ public class LabelManager {
         }
     }
 
+    // ラベルの削除
     public void removeLabel(int index) {
         if (index >= 0 && index < labels.size()) {
             panel.remove(labels.get(index));
@@ -71,11 +78,13 @@ public class LabelManager {
         }
     }
 
+    // ログメッセージの追加
     public void addLogMessage(String message) {
         logTextArea.append(message + "\n");
         logTextArea.setCaretPosition(logTextArea.getDocument().getLength()); // 自動スクロール
     }
 
+    // コンポーネントのリサイズ
     private void resizeComponents() {
         scrollPane.setBounds(panel.getWidth() - 610, panel.getHeight() - 110, 600, 100);
         panel.revalidate();

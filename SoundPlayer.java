@@ -1,25 +1,32 @@
+// 音を再生するクラス
+
 import javax.sound.sampled.*;
 import java.io.File;
 import java.io.IOException;
 
 public class SoundPlayer {
+    // サウンド再生の最小間隔
     private static final int SOUND_PLAY_MIN_TIME = 40;
 
+    // サウンド再生用のクリップ、フィールド
     private static Clip engineClip;
     private static Clip rwrTrackClip;
     private static Clip rwrContactClip;
     private static Clip rwrLaunchAlertClip;
     private static Clip rwrMissileIncomingClip;
+    // サウンド再生のための時間管理用のフィールド
     private static int rwrLaunchSoundPlayTime = SOUND_PLAY_MIN_TIME;
     private static int rwrTrackSoundPlayTime = SOUND_PLAY_MIN_TIME;
     private static int rwrContactSoundPlayTime = SOUND_PLAY_MIN_TIME;
     private static int rwrLaunchSoundRequestedTime = SOUND_PLAY_MIN_TIME;
     private static int rwrTrackSoundRequestedTime = SOUND_PLAY_MIN_TIME;
     private static int rwrContactSoundRequestedTime = SOUND_PLAY_MIN_TIME;
+    // RWRサウンド再生のためのフラグ
     private static boolean isLaunch = false;
     private static boolean isTrack = false;
     private static boolean isContact = false;
 
+    // サウンド再生メソッド
     public static void playSound(String soundFileName, float volume, boolean loop) {
         try {
             File soundFile = new File(soundFileName);
@@ -39,6 +46,7 @@ public class SoundPlayer {
         }
     }
 
+    // エンジンサウンド再生メソッド
     public static synchronized void playEngineSound(String soundFileName, float volume, boolean loop) {
         try {
             if (engineClip != null && engineClip.isRunning()) {
@@ -65,6 +73,7 @@ public class SoundPlayer {
         }
     }
 
+    // エンジンサウンド停止メソッド
     public static synchronized void stopEngineSound() {
         if (engineClip != null && engineClip.isRunning()) {
             engineClip.stop();
@@ -72,6 +81,7 @@ public class SoundPlayer {
         }
     }
 
+    // RWRサウンド更新メソッド
     public static synchronized void updateRWRSound() {
         if (isLaunch) {
             playRWRLaunchSound(-1);
@@ -95,6 +105,7 @@ public class SoundPlayer {
         rwrContactSoundPlayTime++;
     }
 
+    // RWRサウンド再生リクエストメソッド
     public static synchronized void playRWRSound(float volume, String detectionRadarMode) {
         if (detectionRadarMode.equals("Launch")) {
             isLaunch = true;
@@ -109,7 +120,7 @@ public class SoundPlayer {
     }
 
     // -----------------------------------------------------------------------------------
-    // RWRサウンド再生メソッド
+    // 発射探知再生メソッド
     public static synchronized void playRWRLaunchSound(float volume) {
         try {
             // 発射探知警報が再生されていない場合のみ再生
@@ -136,6 +147,7 @@ public class SoundPlayer {
         }
     }
 
+    // レーダー照射音再生メソッド
     public static synchronized void playRWRTrackSound(float volume) {
         try {
             // レーダー照射警報が再生されていない場合のみ再生
@@ -160,9 +172,9 @@ public class SoundPlayer {
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
             e.printStackTrace();
         }
-
     }
 
+    // レーダーコンタクト再生メソッド
     public static synchronized void playRWRContactSound(float volume) {
         try {
             // レーダーコンタクト警報が再生されていない場合のみ再生
@@ -188,9 +200,9 @@ public class SoundPlayer {
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
             e.printStackTrace();
         }
-
     }
 
+    // RWRサウンド停止メソッド
     public static void stopRWRLaunchAlertSound() {
         if (rwrLaunchAlertClip != null && rwrLaunchAlertClip.isRunning()) {
             rwrLaunchAlertClip.stop();

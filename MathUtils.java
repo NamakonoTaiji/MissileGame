@@ -1,3 +1,5 @@
+// 数学関数
+
 public class MathUtils {
     public static final double PI = Math.PI;
 

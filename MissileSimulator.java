@@ -1,3 +1,5 @@
+// メインクラス
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -17,7 +19,8 @@ public class MissileSimulator extends JPanel implements KeyListener {
     private static final int TIMER_INTERVAL = 3;
 
     // フィールド
-    private double scale;
+    private double scale; // 表示倍率
+
     private Player player;
     private MissileLauncher missileLauncher;
     private EmitterManager emitterManager;
@@ -58,11 +61,13 @@ public class MissileSimulator extends JPanel implements KeyListener {
         chaffManager = new ChaffManager(reflectorManager);
         labelManager = new LabelManager(this);
 
+        // ミサイルクラスを抽象化した場合工事予定
         irMissiles = Collections.synchronizedList(new ArrayList<>());
         this.collisionDetector = new CollisionDetector(6, irMissiles);
         smokeTrail = new SmokeTrail();
     }
 
+    // ラベルの初期化
     private void initializeLabels() {
         labelManager.addLabel("Coordinates: ", 10, 10, 300, 30);
         labelManager.addLabel("Angle: ", 10, 50, 200, 30);
@@ -72,6 +77,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         labelManager.addLabel("DragForce: ", 10, 220, 300, 30);
     }
 
+    // タイマーの設定
     private void setupTimer() {
         timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {
@@ -100,6 +106,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
                 missileLauncher.getArhMissiles(), labelManager);
     }
 
+    // 煙の生成
     private void generateSmokeTrail() {
         synchronized (irMissiles) {
             for (IrMissile irMissile : irMissiles) {
@@ -143,12 +150,14 @@ public class MissileSimulator extends JPanel implements KeyListener {
         updateLabels();
     }
 
+    // プレイヤーを中心に描画
     private void centerPlayer(Graphics2D g2d) {
         double offsetX = (getWidth() / 2.0) / scale - player.getX();
         double offsetY = (getHeight() / 2.0) / scale - player.getY();
         g2d.translate(offsetX, offsetY);
     }
 
+    // 背景グリッドの描画
     private void drawBackgroundGrid(Graphics2D g2d) {
         int backGroundImageSize = 50;
         g2d.setColor(new Color(100, 100, 100));
@@ -165,6 +174,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         }
     }
 
+    // ラベルの更新
     private void updateLabels() {
         double launcherToTargetAngle = missileLauncher.getLauncherToTargetAngle();
         labelManager.updateLabel(0, String.format("Coordinates: (%.2f, %.2f)", player.getX(), player.getY()));

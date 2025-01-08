@@ -1,3 +1,5 @@
+//  アクティブレーダー誘導ミサイルのクラス
+
 import java.awt.*;
 
 public class ARHMissile {
@@ -6,11 +8,11 @@ public class ARHMissile {
     private static final double DRAG_COEFFICIENT = 0.01; // 抗力係数
     private static final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
     private static final double CROSS_SECTIONAL_AREA = 0.04; // 物体の断面積 (m^2)
-    private static final double MISSILE_MAX_TURN_RATE = 0.0024;
-    private static final double DELTA_V_OF_BOOSTER = 0.0032;
-    private static final double NORMAL_SEEKER_FOV = Math.toRadians(5);
-    private static final int LIFESPAN = 3900;
-    public static final int BURN_TIME_OF_BOOSTER = 1600;
+    private static final double MISSILE_MAX_TURN_RATE = 0.0024; // ミサイルの最大旋回速度
+    private static final double NORMAL_SEEKER_FOV = Math.toRadians(5); // シーカー視野角
+    private static final int LIFESPAN = 3900; // ミサイルの寿命
+    private static final double DELTA_V_OF_BOOSTER = 0.0032; // ブースターの加速度
+    public static final int BURN_TIME_OF_BOOSTER = 1600; // ブースター燃焼時間
 
     // フィールド
     private double x;
@@ -43,14 +45,14 @@ public class ARHMissile {
         this.speed = speed;
         this.angle = angle;
         this.targetAngle = angle;
-        this.navigationMode = navigationMode;
-        this.seekerAngle = angle;
         this.oldAngle = angle;
-        this.player = player;
+        this.seekerAngle = angle;
         this.seekerFOV = NORMAL_SEEKER_FOV;
+        this.navigationMode = navigationMode;
+        this.player = player;
         this.isCloseSoundPlayed = false;
         this.isMissileSoundPlayed = false;
-        this.radar = new Radar(id, "MSL", "Launch", false, reflectorManager, x, y, angle, rwrManager, 5000, 0.01);
+        this.radar = new Radar(id, "MSL", "Launch", false, reflectorManager, x, y, angle, rwrManager, 6000, 0.01);
     }
 
     // 更新メソッド
@@ -63,6 +65,7 @@ public class ARHMissile {
         age++;
     }
 
+    // レーダーで補足した反射体の座標を更新
     private void updateSeekers() {
         XYCoordinate targetXYCoordinate = radar.getStrongestReflectXYCoordinate(x, y);
         if (targetXYCoordinate.x != 0) {
@@ -70,6 +73,7 @@ public class ARHMissile {
         }
     }
 
+    // レーダーで補足した反射体の座標を更新
     private void updateTargetPosition(XYCoordinate targetXYCoordinate) {
         targetX = targetXYCoordinate.x;
         targetY = targetXYCoordinate.y;
@@ -78,6 +82,7 @@ public class ARHMissile {
         targetAngle = Math.atan2(deltaY, deltaX);
     }
 
+    // ミサイルの角度を更新
     private void updateNavigation() {
         switch (navigationMode) {
             case "ARH" -> updateModifiedProportionalNavigation();
@@ -86,6 +91,7 @@ public class ARHMissile {
         angle += angleDifference;
     }
 
+    // 修正比例航法による目標角速度の算出
     private void updateModifiedProportionalNavigation() {
         angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle) * 3
                 + MathUtils.normalizeAngle(targetAngle, angle) * 0.0015;
@@ -95,7 +101,7 @@ public class ARHMissile {
     // ミサイルの座標を更新
     private void updatePosition() {
         double acc = 0;
-        double dragForce = 0.5 * DRAG_COEFFICIENT * AIR_DENSITY * CROSS_SECTIONAL_AREA * speed * speed;
+        double dragForce = 0.5 * DRAG_COEFFICIENT * AIR_DENSITY * CROSS_SECTIONAL_AREA * speed * speed; // 空気抵抗
         // ブースター燃焼中は加速
         if (age <= BURN_TIME_OF_BOOSTER) {
             acc = DELTA_V_OF_BOOSTER;
@@ -108,8 +114,9 @@ public class ARHMissile {
         y += Math.sin(angle) * speed;
     }
 
+    // 音声の再生
     private void updateSound() {
-        double distFromPlayer = player.distanceFromPlayer(x, y);
+        double distFromPlayer = player.getDistanceFromPlayer(x, y);
 
         // プレイヤーとの速度差を計算
         double deltaX = player.getVelocityX() - Math.cos(angle) * speed;
@@ -148,7 +155,7 @@ public class ARHMissile {
         g2d.drawOval((int) targetX - 10, (int) targetY - 10, 20, 20);
     }
 
-    // 判定メソッド
+    // ミサイルの寿命が尽きたか否か
     public boolean isExpired() {
         return age >= LIFESPAN;
     }
@@ -162,11 +169,11 @@ public class ARHMissile {
         this.smokeAge = age;
     }
 
+    // ゲッターメソッド
     public double getSpeed() {
         return speed;
     }
 
-    // ゲッターメソッド
     public double getX() {
         return x;
     }
@@ -178,5 +185,4 @@ public class ARHMissile {
     public int getAge() {
         return age;
     }
-
 }

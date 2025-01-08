@@ -1,3 +1,5 @@
+// IR誘導ミサイルのクラス
+
 import java.awt.*;
 import java.util.List;
 
@@ -6,13 +8,13 @@ public class IrMissile {
     private static final double DRAG_COEFFICIENT = 0.01; // 抗力係数
     private static final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
     private static final double CROSS_SECTIONAL_AREA = 0.04; // 物体の断面積 (m^2)
-    private static final double PLAYER_IR_SENSITIVITY = 0.9;
-    private static final double MISSILE_MAX_TURN_RATE = 0.0024;
-    private static final double DELTA_V_OF_BOOSTER = 0.0032;
-    private static final double IRCCM_SEEKER_FOV = Math.toRadians(5);
-    private static final double NORMAL_SEEKER_FOV = Math.toRadians(5);
-    private static final int LIFESPAN = 3900;
-    public static final int BURN_TIME_OF_BOOSTER = 1600;
+    private static final double PLAYER_IR_SENSITIVITY = 0.9; // プレイヤー機体に対する欺瞞耐性
+    private static final double MISSILE_MAX_TURN_RATE = 0.0024; // ミサイルの最大旋回速度
+    private static final double IRCCM_SEEKER_FOV = Math.toRadians(5); // IRCCMシーカー視野角
+    private static final double NORMAL_SEEKER_FOV = Math.toRadians(5); // 通常シーカー視野角
+    private static final int LIFESPAN = 3900; // ミサイルの寿命
+    private static final double DELTA_V_OF_BOOSTER = 0.0032; // ブースターの加速度
+    public static final int BURN_TIME_OF_BOOSTER = 1600; // ブースター燃焼時間
 
     // フィールド
     private double x;
@@ -66,6 +68,7 @@ public class IrMissile {
         age++;
     }
 
+    // レーダーで補足した熱源の座標を更新
     private void updateSeekers() {
         List<Emitter> emitters = emitterManager.getEmitters();
         double weightedSumX = 0;
@@ -76,10 +79,11 @@ public class IrMissile {
             double emitterX = emitter.getX();
             double emitterY = emitter.getY();
             double emitterDistance = Math.sqrt(Math.pow(emitterX - x, 2) + Math.pow(emitterY - y, 2));
-            double emitterLOSAngle = Math.atan2(emitterY - y, emitterX - x);
-            double angleDifferenceToEmitter = MathUtils.normalizeAngle(seekerAngle, emitterLOSAngle); // 首振り角-熱源LOS角
+            double emitterLOSAngle = Math.atan2(emitterY - y, emitterX - x); // 熱源LOS角
+            double angleDifferenceToEmitter = MathUtils.normalizeAngle(seekerAngle, emitterLOSAngle); // 首振り角 - 熱源LOS角
             double infraredEmission = calculateInfraredEmission(emitter, emitterDistance, angleDifferenceToEmitter); // 熱源強度
 
+            // シーカー視野角内の熱源のみを検出
             if (Math.abs(angleDifferenceToEmitter) <= seekerFOV / 2) {
                 // 熱源強度に基づいた重みづけ
                 weightedSumX += emitterX * infraredEmission;
@@ -107,52 +111,60 @@ public class IrMissile {
         double infraredEmission = emitter.getInfraredEmission();
         String sourceType = emitter.getSourceType();
 
-        if (sourceType.equals("Player")) { // プレイヤーに対する熱源強度計算
+        if (sourceType.equals("Player")) {
+            // プレイヤーに対する熱源強度計算
             double playerAngle = player.getAngle();
             infraredEmission /= emitterDistance * 0.5; // 遠距離ほど熱源が小さい
             infraredEmission *= PLAYER_IR_SENSITIVITY; // プレイヤー機体に対する欺瞞耐性
             infraredEmission /= MathUtils.clamp(Math.abs(MathUtils.normalizeAngle(seekerAngle, playerAngle)), 0.4, 1.5) // 後方排気をより大きくとらえる
                     / 1.5;
-        } else if (sourceType.equals("Flare")) { // フレアに対する熱源強度計算
+        } else if (sourceType.equals("Flare")) {
+            // フレアに対する熱源強度計算
             infraredEmission /= emitterDistance * 0.5;
         }
-
         return infraredEmission;
     }
 
+    // 誘導アルゴリズムの選択,ミサイルの角度を更新
     private void updateNavigation() {
         switch (navigationMode) {
-            // 単追尾
-            case "PPN" -> {
-                angleDifference = MathUtils.normalizeAngle(targetAngle, angle);
-            }
-            // 比例航法
-            case "PN" -> {
-                angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle) * 3;
-                oldAngle = targetAngle;
-            }
-            // 修正比例航法
-            case "MPN" -> {
-                angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle) * 3
-                        + MathUtils.normalizeAngle(targetAngle, angle) * 0.0015;
-                oldAngle = targetAngle;
-            }
-            // 半自動指令照準線一致誘導
-            case "SACLOS" -> {
-                double distFromMissileLauncher = missileLauncher.distanceFromMissileLauncher(x, y);
-                double SACLOSTargetX = missileLauncher.getX()
-                        + Math.cos(missileLauncher.getLauncherToTargetAngle()) * distFromMissileLauncher;
-                double SACLOSTargetY = missileLauncher.getY()
-                        + Math.sin(missileLauncher.getLauncherToTargetAngle()) * distFromMissileLauncher;
-                double deltaX = SACLOSTargetX - x;
-                double deltaY = SACLOSTargetY - y;
-                angleDifference = MathUtils.normalizeAngle(Math.atan2(deltaY, deltaX), angle) * 0.0015;
-
-            }
+            case "PPN" -> updatePPN();
+            case "PN" -> updatePN();
+            case "MPN" -> updateMPN();
+            case "SACLOS" -> updateSACLOS();
         }
-
         angleDifference = MathUtils.clamp(angleDifference, -MISSILE_MAX_TURN_RATE, MISSILE_MAX_TURN_RATE);
         angle += angleDifference;
+    }
+
+    // 単追尾
+    private void updatePPN() {
+        angleDifference = MathUtils.normalizeAngle(targetAngle, angle);
+    }
+
+    // 比例航法
+    private void updatePN() {
+        angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle) * 3;
+        oldAngle = targetAngle;
+    }
+
+    // 修正比例航法
+    private void updateMPN() {
+        angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle) * 3
+                + MathUtils.normalizeAngle(targetAngle, angle) * 0.0015;
+        oldAngle = targetAngle;
+    }
+
+    // 半自動指令照準一致線誘導
+    private void updateSACLOS() {
+        double distFromMissileLauncher = missileLauncher.getDistanceFromMissileLauncher(x, y);
+        double SACLOSTargetX = missileLauncher.getX()
+                + Math.cos(missileLauncher.getLauncherToTargetAngle()) * distFromMissileLauncher;
+        double SACLOSTargetY = missileLauncher.getY()
+                + Math.sin(missileLauncher.getLauncherToTargetAngle()) * distFromMissileLauncher;
+        double deltaX = SACLOSTargetX - x;
+        double deltaY = SACLOSTargetY - y;
+        angleDifference = MathUtils.normalizeAngle(Math.atan2(deltaY, deltaX), angle) * 0.0015;
     }
 
     // ミサイルの座標を更新
@@ -172,7 +184,7 @@ public class IrMissile {
     }
 
     private void updateSound() {
-        double distFromPlayer = player.distanceFromPlayer(x, y);
+        double distFromPlayer = player.getDistanceFromPlayer(x, y);
 
         // プレイヤーとの速度差を計算
         double deltaX = player.getVelocityX() - Math.cos(angle) * speed;

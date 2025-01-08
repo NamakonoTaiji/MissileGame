@@ -1,3 +1,5 @@
+// ミサイル発射台のクラス
+
 import java.awt.*;
 import java.util.List;
 import java.util.Collections;
@@ -6,7 +8,7 @@ import java.util.ArrayList;
 
 public class MissileLauncher {
     // 定数
-    private static final String DEFAULT_NAVIGATION_MODE = "PPN";
+    private static final String DEFAULT_NAVIGATION_MODE = "PPN"; // デフォルトのミサイル誘導モード
     private static final Color LAUNCHER_COLOR = Color.BLUE;
     private static final int LAUNCHER_WIDTH = 30;
     private static final int LAUNCHER_HEIGHT = 10;
@@ -17,19 +19,20 @@ public class MissileLauncher {
     private double x;
     private double y;
     private boolean isLoaded;
-    private String navigationMode;
-    private int reloadCount;
     private double launchSpeed;
     private double reloadTime;
     private double launcherToTargetAngle;
+    private int reloadCount;
+    private String id;
+    private String radarMode = "CLOCKWISE";
+    private String navigationMode;
+
     private List<IrMissile> irMissiles;
     private List<ARHMissile> arhMissiles;
     private EmitterManager emitterManager;
     private Player player;
     private Radar searchRadar;
     private Radar trackRadar;
-    private String id;
-    private String radarMode = "CLOCKWISE";
     private RWRManager rwrManager;
     private ReflectorManager reflectorManager;
 
@@ -60,7 +63,6 @@ public class MissileLauncher {
 
     // ミサイルの発射
     public void launchMissile() {
-
         if (isLoaded) {
             if (!navigationMode.equals("ARH")) {
                 IrMissile irMissile = new IrMissile(x, y, launchSpeed, launcherToTargetAngle, navigationMode,
@@ -73,21 +75,26 @@ public class MissileLauncher {
                 arhMissiles.add(arhMissile);
             }
 
-            double distanceFromPlayer = player.distanceFromPlayer(x, y);
-            if (distanceFromPlayer <= 1600) {
-                float volume = (float) MathUtils.clamp(-0.01 * distanceFromPlayer + 1.3333, -16, 0);
-                if (distanceFromPlayer < 200) {
-                    SoundPlayer.playSound("sounds/missile_start_heavy-001.wav", 0, false);
-                } else {
-                    SoundPlayer.playSound("sounds/missile_start_heavy_far-002.wav", volume, false);
-                }
-            }
+            playLaunchSound();
             System.out.println("MSL launched at angle " + String.format("%.2f", Math.toDegrees(launcherToTargetAngle))
                     + " with speed " + launchSpeed);
             isLoaded = false;
             reloadCount = 0;
         } else {
             System.out.println("No missile loaded.");
+        }
+    }
+
+    // ミサイル発射時の音を再生
+    private void playLaunchSound() {
+        double distanceFromPlayer = player.getDistanceFromPlayer(x, y);
+        if (distanceFromPlayer <= 1600) {
+            float volume = (float) MathUtils.clamp(-0.01 * distanceFromPlayer + 1.3333, -16, 0);
+            if (distanceFromPlayer < 200) {
+                SoundPlayer.playSound("sounds/missile_start_heavy-001.wav", 0, false);
+            } else {
+                SoundPlayer.playSound("sounds/missile_start_heavy_far-002.wav", volume, false);
+            }
         }
     }
 
@@ -105,6 +112,7 @@ public class MissileLauncher {
         trackRadar.update("Track", x, y);
     }
 
+    // ミサイルのリロード
     private void reloadMissile() {
         if (!isLoaded) {
             if (reloadCount < reloadTime) {
@@ -115,6 +123,7 @@ public class MissileLauncher {
         }
     }
 
+    // ミサイルの更新
     private void updateMissileList() {
         synchronized (irMissiles) {
             Iterator<IrMissile> iterator = irMissiles.iterator();
@@ -144,15 +153,17 @@ public class MissileLauncher {
         // レーダーを描画
         searchRadar.draw(g);
         trackRadar.draw(g);
-        updateLauncherAngle(targetX, targetY);
+        updateLauncherToTargetAngle(targetX, targetY);
         drawLauncher(g);
         drawMissiles(g);
     }
 
-    private void updateLauncherAngle(double targetX, double targetY) {
+    // 発射台のLOS角度を更新
+    private void updateLauncherToTargetAngle(double targetX, double targetY) {
         launcherToTargetAngle = Math.atan2((targetY - y), (targetX - x));
     }
 
+    // 発射台とミサイルの描画
     private void drawLauncher(Graphics g) {
         g.setColor(LAUNCHER_COLOR);
         g.drawRect((int) x - LAUNCHER_WIDTH / 2, (int) y - LAUNCHER_HEIGHT / 2, LAUNCHER_WIDTH, LAUNCHER_HEIGHT);
@@ -167,6 +178,7 @@ public class MissileLauncher {
                 (int) (y + drawLauncherArmLength * Math.sin(launcherToTargetAngle)));
     }
 
+    // ミサイルの描画
     private void drawMissiles(Graphics g) {
         synchronized (irMissiles) {
             for (IrMissile irMissile : irMissiles) {
@@ -181,7 +193,7 @@ public class MissileLauncher {
         }
     }
 
-    // ミサイルのモード設定
+    // ミサイルの誘導アルゴリズム設定
     public void setMissileMode() {
         if (navigationMode.equals("PPN")) {
             navigationMode = "PN";
@@ -213,7 +225,7 @@ public class MissileLauncher {
         return launcherToTargetAngle;
     }
 
-    public double distanceFromMissileLauncher(double targetX, double targetY) {
+    public double getDistanceFromMissileLauncher(double targetX, double targetY) {
         return Math.sqrt(
                 Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
     }

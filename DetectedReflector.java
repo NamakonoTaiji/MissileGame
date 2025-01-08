@@ -1,3 +1,5 @@
+// 探知した反射体の情報を保持するクラス
+
 public class DetectedReflector {
     private double x;
     private double y;

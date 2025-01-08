@@ -1,3 +1,5 @@
+// 反射体のインターフェース
+
 public interface Reflector {
 
     String getSourceType();
