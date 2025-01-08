@@ -65,23 +65,31 @@ public class ARHMissile {
 
     private void updateSeekers() {
         XYCoordinate targetXYCoordinate = radar.getStrongestReflectXYCoordinate(x, y);
-        System.out.println(targetXYCoordinate.x);
         if (targetXYCoordinate.x != 0) {
-            targetX = targetXYCoordinate.x;
-            targetY = targetXYCoordinate.y;
-            double deltaX = targetX - x;
-            double deltaY = targetY - y;
-            targetAngle = Math.atan2(deltaY, deltaX);
+            updateTargetPosition(targetXYCoordinate);
         }
     }
 
+    private void updateTargetPosition(XYCoordinate targetXYCoordinate) {
+        targetX = targetXYCoordinate.x;
+        targetY = targetXYCoordinate.y;
+        double deltaX = targetX - x;
+        double deltaY = targetY - y;
+        targetAngle = Math.atan2(deltaY, deltaX);
+    }
+
     private void updateNavigation() {
-        // 修正比例航法
+        switch (navigationMode) {
+            case "ARH" -> updateModifiedProportionalNavigation();
+        }
+        angleDifference = MathUtils.clamp(angleDifference, -MISSILE_MAX_TURN_RATE, MISSILE_MAX_TURN_RATE);
+        angle += angleDifference;
+    }
+
+    private void updateModifiedProportionalNavigation() {
         angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle) * 3
                 + MathUtils.normalizeAngle(targetAngle, angle) * 0.0015;
         oldAngle = targetAngle;
-        angleDifference = MathUtils.clamp(angleDifference, -MISSILE_MAX_TURN_RATE, MISSILE_MAX_TURN_RATE);
-        angle += angleDifference;
     }
 
     // ミサイルの座標を更新

@@ -203,7 +203,6 @@ public class SoundPlayer {
         if (rwrTrackClip != null && rwrTrackClip.isRunning()) {
             rwrTrackClip.stop();
             rwrTrackClip.close();
-            System.out.println("Stop Track");
             isTrack = false;
         }
     }

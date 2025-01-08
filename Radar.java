@@ -108,7 +108,6 @@ public class Radar {
             }
         }
 
-        // System.out.println(rwrInfos.size()); // デバッグ用...RWRInfoの数を表示
         return detectedReflectors;
     }
 
