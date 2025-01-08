@@ -12,12 +12,13 @@ public class SoundPlayer {
     private static Clip rwrMissileIncomingClip;
     private static int rwrLaunchSoundPlayTime = SOUND_PLAY_MIN_TIME;
     private static int rwrTrackSoundPlayTime = SOUND_PLAY_MIN_TIME;
+    private static int rwrContactSoundPlayTime = SOUND_PLAY_MIN_TIME;
+    private static int rwrLaunchSoundRequestedTime = SOUND_PLAY_MIN_TIME;
+    private static int rwrTrackSoundRequestedTime = SOUND_PLAY_MIN_TIME;
+    private static int rwrContactSoundRequestedTime = SOUND_PLAY_MIN_TIME;
     private static boolean isLaunch = false;
     private static boolean isTrack = false;
     private static boolean isContact = false;
-    private static boolean isLaunchSoundPlayed = false;
-    private static boolean isTrackSoundPlayed = false;
-    private static boolean isContactSoundPlayed = false;
 
     public static void playSound(String soundFileName, float volume, boolean loop) {
         try {
@@ -72,48 +73,51 @@ public class SoundPlayer {
     }
 
     public static synchronized void updateRWRSound() {
-        if (rwrLaunchSoundPlayTime < SOUND_PLAY_MIN_TIME || isLaunch) {
-            playRWRLaunchSound(-5);
-        } else if (rwrTrackSoundPlayTime < SOUND_PLAY_MIN_TIME || isTrack) {
-            System.out.println(rwrTrackSoundPlayTime);
-            playRWRTrackSound(-5);
+        if (isLaunch) {
+            playRWRLaunchSound(-1);
+            rwrLaunchSoundPlayTime++;
+        } else if (isTrack) {
+            playRWRTrackSound(-1);
+            rwrTrackSoundPlayTime++;
         } else if (isContact) {
-            playRWRContactSound(-5);
+            playRWRContactSound(-1);
         }
 
-        if (rwrLaunchSoundPlayTime >= SOUND_PLAY_MIN_TIME) {
-            stopRWRLaunchSound();
+        if (rwrLaunchSoundRequestedTime >= SOUND_PLAY_MIN_TIME) {
+            stopRWRLaunchAlertSound();
         }
-        if (rwrTrackSoundPlayTime >= SOUND_PLAY_MIN_TIME) {
+        if (rwrTrackSoundRequestedTime >= SOUND_PLAY_MIN_TIME) {
             stopRWRTrackSound();
         }
 
-        rwrLaunchSoundPlayTime++;
-        rwrTrackSoundPlayTime++;
+        rwrLaunchSoundRequestedTime++;
+        rwrTrackSoundRequestedTime++;
+        rwrContactSoundPlayTime++;
     }
 
     public static synchronized void playRWRSound(float volume, String detectionRadarMode) {
-        isLaunch = false;
-        isTrack = false;
-        isContact = false;
         if (detectionRadarMode.equals("Launch")) {
             isLaunch = true;
-            rwrLaunchSoundPlayTime = 0;
+            rwrLaunchSoundRequestedTime = 0;
         } else if (detectionRadarMode.equals("Track")) {
+            rwrTrackSoundRequestedTime = 0;
             isTrack = true;
-            rwrTrackSoundPlayTime = 0;
         } else {
+            rwrContactSoundPlayTime = 0;
             isContact = true;
         }
-
-        updateRWRSound();
     }
 
+    // -----------------------------------------------------------------------------------
+    // RWRサウンド再生メソッド
     public static synchronized void playRWRLaunchSound(float volume) {
         try {
             // 発射探知警報が再生されていない場合のみ再生
-            if (!isLaunchSoundPlayed && (rwrLaunchAlertClip == null || !rwrLaunchAlertClip.isRunning())) {
+            if (rwrLaunchSoundPlayTime > 10 && (rwrLaunchAlertClip == null || !rwrLaunchAlertClip.isRunning())) {
+                rwrLaunchSoundPlayTime = 0;
+
                 System.out.println("Launch");
+
                 File soundFile = new File("sounds/RWR/missile_launch.wav");
                 AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(soundFile);
                 rwrLaunchAlertClip = AudioSystem.getClip();
@@ -125,19 +129,21 @@ public class SoundPlayer {
                 volumeControl.setValue(volume); // 音量をデシベル単位で設定
                 rwrLaunchAlertClip.loop(Clip.LOOP_CONTINUOUSLY);
                 rwrLaunchAlertClip.start();
-                isLaunchSoundPlayed = true;
+                stopRWRTrackSound();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        stopRWRTrackSound();
     }
 
     public static synchronized void playRWRTrackSound(float volume) {
         try {
             // レーダー照射警報が再生されていない場合のみ再生
-            if (!isTrackSoundPlayed && (rwrTrackClip == null || !rwrTrackClip.isRunning())) {
+            if (rwrTrackSoundPlayTime > 10 && (rwrTrackClip == null || !rwrTrackClip.isRunning())) {
+                rwrTrackSoundPlayTime = 0;
+
                 System.out.println("Track");
+
                 File soundFile = new File("sounds/RWR/radar_lock.wav");
                 AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(soundFile);
                 rwrTrackClip = AudioSystem.getClip();
@@ -149,19 +155,22 @@ public class SoundPlayer {
                 volumeControl.setValue(volume); // 音量をデシベル単位で設定
                 rwrTrackClip.loop(Clip.LOOP_CONTINUOUSLY);
                 rwrTrackClip.start();
-                isTrackSoundPlayed = true;
+                stopRWRLaunchAlertSound();
             }
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
             e.printStackTrace();
         }
-        stopRWRLaunchSound();
+
     }
 
     public static synchronized void playRWRContactSound(float volume) {
         try {
             // レーダーコンタクト警報が再生されていない場合のみ再生
-            if (!isContactSoundPlayed && (rwrContactClip == null || !rwrContactClip.isRunning())) {
+            if (rwrContactSoundPlayTime > 40 && (rwrContactClip == null || !rwrContactClip.isRunning())) {
+                rwrContactSoundPlayTime = 0;
+
                 System.out.println("Contact");
+
                 File soundFile = new File("sounds/RWR/contact.wav");
                 AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(soundFile);
                 rwrContactClip = AudioSystem.getClip();
@@ -172,21 +181,21 @@ public class SoundPlayer {
                         .getControl(FloatControl.Type.MASTER_GAIN);
                 volumeControl.setValue(volume); // 音量をデシベル単位で設定
                 rwrContactClip.start();
-                isContactSoundPlayed = true;
+                isContact = false;
+                stopRWRLaunchAlertSound();
+                stopRWRTrackSound();
             }
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
             e.printStackTrace();
         }
-        stopRWRLaunchSound();
-        stopRWRTrackSound();
+
     }
 
-    public static void stopRWRLaunchSound() {
+    public static void stopRWRLaunchAlertSound() {
         if (rwrLaunchAlertClip != null && rwrLaunchAlertClip.isRunning()) {
             rwrLaunchAlertClip.stop();
             rwrLaunchAlertClip.close();
             isLaunch = false;
-            isLaunchSoundPlayed = false;
         }
     }
 
@@ -194,15 +203,8 @@ public class SoundPlayer {
         if (rwrTrackClip != null && rwrTrackClip.isRunning()) {
             rwrTrackClip.stop();
             rwrTrackClip.close();
+            System.out.println("Stop Track");
             isTrack = false;
-            isTrackSoundPlayed = false;
-        }
-    }
-
-    public static void stopRWRLaunchAlertSound() {
-        if (rwrLaunchAlertClip != null && rwrLaunchAlertClip.isRunning()) {
-            rwrLaunchAlertClip.stop();
-            rwrLaunchAlertClip.close();
         }
     }
 }

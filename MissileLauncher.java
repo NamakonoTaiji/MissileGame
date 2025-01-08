@@ -18,17 +18,20 @@ public class MissileLauncher {
     private double y;
     private boolean isLoaded;
     private String navigationMode;
-    private int missileCount;
+    private int reloadCount;
     private double launchSpeed;
     private double reloadTime;
     private double launcherToTargetAngle;
-    private List<Missile> missiles;
+    private List<IrMissile> irMissiles;
+    private List<ARHMissile> arhMissiles;
     private EmitterManager emitterManager;
     private Player player;
     private Radar searchRadar;
     private Radar trackRadar;
     private String id;
     private String radarMode = "CLOCKWISE";
+    private RWRManager rwrManager;
+    private ReflectorManager reflectorManager;
 
     // コンストラクタ
     public MissileLauncher(String id, double x, double y, double launchSpeed, double reloadTime,
@@ -39,25 +42,38 @@ public class MissileLauncher {
         this.y = y;
         this.isLoaded = false;
         this.navigationMode = DEFAULT_NAVIGATION_MODE;
-        this.missileCount = 0;
+        this.reloadCount = 0;
         this.launchSpeed = launchSpeed;
         this.reloadTime = reloadTime;
-        this.missiles = Collections.synchronizedList(new ArrayList<>());
+        this.irMissiles = Collections.synchronizedList(new ArrayList<>());
+        this.arhMissiles = Collections.synchronizedList(new ArrayList<>());
         this.emitterManager = emitterManager;
+        this.reflectorManager = reflectorManager;
+        this.rwrManager = rwrManager;
         this.player = player;
-        this.searchRadar = new Radar("SAM1_Search", TEAM, this.radarMode, true, reflectorManager, x, y, 0, rwrManager);
-        this.trackRadar = new Radar("SAM1_Track", TEAM, "Track", true, reflectorManager, x, y, 0, rwrManager);
+        this.searchRadar = new Radar("SAM1_Search", TEAM, this.radarMode, true, reflectorManager, x, y, 0, rwrManager,
+                9000, 0.008);
+        this.trackRadar = new Radar("SAM1_Track", TEAM, "Track", true, reflectorManager, x, y, 0, rwrManager, 5000,
+                0.01);
         this.id = id;
     }
 
     // ミサイルの発射
     public void launchMissile() {
-        double distanceFromPlayer = player.distanceFromPlayer(x, y);
+
         if (isLoaded) {
-            Missile missile = new Missile(x, y, launchSpeed,
-                    launcherToTargetAngle, navigationMode, emitterManager,
-                    player, this);
-            missiles.add(missile);
+            if (!navigationMode.equals("ARH")) {
+                IrMissile irMissile = new IrMissile(x, y, launchSpeed, launcherToTargetAngle, navigationMode,
+                        emitterManager, player, this);
+                irMissiles.add(irMissile);
+
+            } else if (navigationMode.equals("ARH")) {
+                ARHMissile arhMissile = new ARHMissile(id, x, y, launchSpeed, launcherToTargetAngle, navigationMode,
+                        reflectorManager, player, rwrManager);
+                arhMissiles.add(arhMissile);
+            }
+
+            double distanceFromPlayer = player.distanceFromPlayer(x, y);
             if (distanceFromPlayer <= 1600) {
                 float volume = (float) MathUtils.clamp(-0.01 * distanceFromPlayer + 1.3333, -16, 0);
                 if (distanceFromPlayer < 200) {
@@ -66,11 +82,10 @@ public class MissileLauncher {
                     SoundPlayer.playSound("sounds/missile_start_heavy_far-002.wav", volume, false);
                 }
             }
-            System.out
-                    .println("Missile launched at angle " + String.format("%.2f", Math.toDegrees(launcherToTargetAngle))
-                            + " with speed " + launchSpeed);
+            System.out.println("MSL launched at angle " + String.format("%.2f", Math.toDegrees(launcherToTargetAngle))
+                    + " with speed " + launchSpeed);
             isLoaded = false;
-            missileCount = 0;
+            reloadCount = 0;
         } else {
             System.out.println("No missile loaded.");
         }
@@ -86,15 +101,14 @@ public class MissileLauncher {
         searchRadar.update("CLOCKWISE", x, y);
         searchRadar.scanForReflectors();
 
-        trackRadar.setAngle(launcherToTargetAngle);
+        trackRadar.setAngle(0);
         trackRadar.update("Track", x, y);
-        trackRadar.scanForReflectors();
     }
 
     private void reloadMissile() {
         if (!isLoaded) {
-            if (missileCount < reloadTime) {
-                missileCount++;
+            if (reloadCount < reloadTime) {
+                reloadCount++;
             } else {
                 isLoaded = true;
             }
@@ -102,13 +116,24 @@ public class MissileLauncher {
     }
 
     private void updateMissileList() {
-        synchronized (missiles) {
-            Iterator<Missile> iterator = missiles.iterator();
+        synchronized (irMissiles) {
+            Iterator<IrMissile> iterator = irMissiles.iterator();
             while (iterator.hasNext()) {
-                Missile missile = iterator.next();
-                missile.update();
-                if (missile.isExpired()) {
+                IrMissile irMissile = iterator.next();
+                irMissile.update();
+                if (irMissile.isExpired()) {
                     iterator.remove();
+                }
+            }
+        }
+
+        synchronized (arhMissiles) {
+            Iterator<ARHMissile> arhIterator = arhMissiles.iterator();
+            while (arhIterator.hasNext()) {
+                ARHMissile arhMissile = arhIterator.next();
+                arhMissile.update();
+                if (arhMissile.isExpired()) {
+                    arhIterator.remove();
                 }
             }
         }
@@ -143,9 +168,15 @@ public class MissileLauncher {
     }
 
     private void drawMissiles(Graphics g) {
-        synchronized (missiles) {
-            for (Missile missile : missiles) {
-                missile.draw(g);
+        synchronized (irMissiles) {
+            for (IrMissile irMissile : irMissiles) {
+                irMissile.draw(g);
+            }
+        }
+
+        synchronized (arhMissiles) {
+            for (ARHMissile arhMissile : arhMissiles) {
+                arhMissile.draw(g);
             }
         }
     }
@@ -159,6 +190,8 @@ public class MissileLauncher {
         } else if (navigationMode.equals("MPN")) {
             navigationMode = "SACLOS";
         } else if (navigationMode.equals("SACLOS")) {
+            navigationMode = "ARH";
+        } else if (navigationMode.equals("ARH")) {
             navigationMode = "PPN";
         }
     }
@@ -168,8 +201,8 @@ public class MissileLauncher {
         return isLoaded;
     }
 
-    public int getMissileCount() {
-        return missileCount;
+    public int getReloadCount() {
+        return reloadCount;
     }
 
     public String getMissileMode() {
@@ -185,8 +218,12 @@ public class MissileLauncher {
                 Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
     }
 
-    public List<Missile> getMissiles() {
-        return missiles;
+    public List<IrMissile> getIrMissiles() {
+        return irMissiles;
+    }
+
+    public List<ARHMissile> getArhMissiles() {
+        return arhMissiles;
     }
 
     public double getX() {

@@ -3,8 +3,6 @@ import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.File;
-import java.util.Iterator;
-import java.util.Random;
 import javax.imageio.ImageIO;
 import java.util.List;
 
@@ -20,7 +18,7 @@ public class Player implements Emitter, Reflector {
     private static final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
     private static final double CROSS_SECTIONAL_AREA = 20; // 物体の断面積 (m^2)
     private static final double INFRARED_EMISSION = 1.0;
-    public static final double REFLECTOR_STRENGTH = 1.0;
+    public static final double REFLECTOR_STRENGTH = 1.1;
     private final String TEAM = "Alpha";
 
     // フィールド
@@ -42,20 +40,9 @@ public class Player implements Emitter, Reflector {
     private int imageHeight;
     private double dragForce = 0;
     private double liftForce = 0;
-    private List<Missile> missiles;
-    private double hitRadius = 6;
-    private LabelManager labelManager;
-    private Random random = new Random();
     private boolean mach = false;
     private boolean isSonicBoomed = false;
     private Radar radar;
-
-    // 被弾音ファイルのリスト
-    private String[] hitSounds = {
-            "sounds/module_damaged/module_damage-001.wav",
-            "sounds/module_damaged/module_damage-002.wav",
-            "sounds/module_damaged/module_damage-003.wav"
-    };
 
     // コンストラクタ
     public Player(double x, double y, double speed, EmitterManager emitterManager,
@@ -69,7 +56,7 @@ public class Player implements Emitter, Reflector {
         this.flareManager = new FlareManager(emitterManager);
         this.chaffManager = new ChaffManager(reflectorManager);
         this.radar = new Radar("Player", TEAM, "SWEEP", true, reflectorManager, x + Math.cos(angle) * 10,
-                y + Math.sin(angle) * 10, angle, rwrManager);
+                y + Math.sin(angle) * 10, angle, rwrManager, 5000, 0.006);
 
         // 画像を読み込む
         try {
@@ -85,9 +72,7 @@ public class Player implements Emitter, Reflector {
     }
 
     // プレイヤーの更新
-    public void update(List<Missile> missiles, LabelManager labelManager) {
-        this.missiles = missiles;
-        this.labelManager = labelManager;
+    public void update(LabelManager labelManager) {
         double acc = calculateAcceleration();
         double adjustmentFactorConst = 0;
 
@@ -99,7 +84,7 @@ public class Player implements Emitter, Reflector {
 
         // 加速度の反映と速度の更新
         speed += inertiaEffect;
-        speed = Math.max(speed, 0.01); // 静止バグ対策
+        speed = Math.max(speed, 0.1); // 静止バグ対策
 
         // 速度ベクトルの更新
         updateVelocity(adjustmentFactorConst);
@@ -116,7 +101,7 @@ public class Player implements Emitter, Reflector {
         radar.update("SWEEP", x + Math.cos(angle) * 10,
                 y + Math.sin(angle) * 10);
 
-        checkCollisions();
+        // checkCollisions();
         flareManager.updateFlares();
         chaffManager.updateChaffs();
     }
@@ -209,36 +194,6 @@ public class Player implements Emitter, Reflector {
         }
     }
 
-    // 衝突判定
-    private void checkCollisions() {
-        double missileHitRadius = 1.0;
-        synchronized (missiles) {
-            Iterator<Missile> iterator = missiles.iterator();
-            while (iterator.hasNext()) {
-                Missile missile = iterator.next();
-                double distance = Math.sqrt(
-                        Math.pow(missile.getX() - this.x, 2) + Math.pow(missile.getY() - this.y, 2));
-                if (distance < hitRadius + missileHitRadius) {
-                    handleHit(missile);
-                    iterator.remove();
-                }
-            }
-        }
-    }
-
-    // 被弾時処理
-    private void handleHit(Missile missile) {
-        String message = "Hit detected! Missile at (" + missile.getX() + ", " + missile.getY() + ")";
-        System.out.println(message);
-        if (labelManager != null) {
-            labelManager.addLogMessage(message);
-        }
-
-        // ランダムな被弾音を再生
-        String hitSound = hitSounds[random.nextInt(hitSounds.length)];
-        SoundPlayer.playSound(hitSound, 0, false);
-    }
-
     // 描画メソッド
     public void draw(Graphics2D g2d) {
         AffineTransform originalTransform = g2d.getTransform();
@@ -256,10 +211,10 @@ public class Player implements Emitter, Reflector {
         radar.draw(g2d);
 
         // レーダーで取得した反射体の座標を四角で囲む
-        List<Point> reflectors = radar.scanForReflectors();
+        List<DetectedReflector> reflectors = radar.scanForReflectors();
         g2d.setColor(new Color(0, 255, 0, 170));
-        for (Point p : reflectors) {
-            g2d.drawRect(p.x - 10, p.y - 10, 20, 20); // 反射体の座標を中心に10x10の四角を描画
+        for (DetectedReflector reflector : reflectors) {
+            g2d.drawRect((int) reflector.getX() - 10, (int) reflector.getY() - 10, 20, 20); // 反射体の座標を中心に10x10の四角を描画
         }
 
         // ベクトルの向きを描画
@@ -360,10 +315,5 @@ public class Player implements Emitter, Reflector {
     @Override
     public double getReflectanceStrength() {
         return REFLECTOR_STRENGTH;
-    }
-
-    // ラベルマネージャの設定
-    public void setLabelManager(LabelManager labelManager) {
-        this.labelManager = labelManager;
     }
 }

@@ -1,7 +1,7 @@
 import java.awt.*;
 import java.util.List;
 
-public class Missile {
+public class IrMissile {
     // 定数
     private static final double DRAG_COEFFICIENT = 0.01; // 抗力係数
     private static final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
@@ -37,7 +37,7 @@ public class Missile {
     private MissileLauncher missileLauncher;
 
     // コンストラクタ
-    public Missile(double x, double y, double speed, double angle, String navigationMode,
+    public IrMissile(double x, double y, double speed, double angle, String navigationMode,
             EmitterManager emitterManager, Player player, MissileLauncher missileLauncher) {
         this.x = x;
         this.y = y;

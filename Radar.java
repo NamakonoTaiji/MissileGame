@@ -9,11 +9,11 @@ public class Radar {
     private String detectionTargetType = "None";
     private double radarStrength = 30;
     private double radarFOV = Math.toRadians(5);
-    private double radarRange = 5000;
+    private double radarRange;
     private double radarAngleMax = Math.toRadians(50);
     private double angle;
     private double currentAngle = 0;
-    private double radarSweepSpeed = 0.008;
+    private double radarSweepSpeed;
     private String radarMode = "SWEEP";
     private String team;
     private boolean IFF;
@@ -26,7 +26,7 @@ public class Radar {
     private RWRManager rwrManager;
 
     public Radar(String id, String team, String radarMode, boolean IFF, ReflectorManager reflectorManager, double x,
-            double y, double angle, RWRManager rwrManager) {
+            double y, double angle, RWRManager rwrManager, double radarRange, double radarSweepSpeed) {
         this.team = team;
         this.IFF = IFF;
         this.reflectorManager = reflectorManager;
@@ -36,6 +36,8 @@ public class Radar {
         this.radarMode = radarMode;
         this.id = id;
         this.rwrManager = rwrManager;
+        this.radarRange = radarRange;
+        this.radarSweepSpeed = radarSweepSpeed;
     }
 
     public void update(String radarMode, double x, double y) {
@@ -55,11 +57,18 @@ public class Radar {
             }
         } else if (radarMode.equals("CLOCKWISE")) {
             currentAngle = MathUtils.normalizeAngle(currentAngle + radarSweepSpeed, 0);
+        } else if (radarMode.equals("Track") || radarMode.equals("Launch")) {
+            Point targetPoint = getStrongestReflectPoint(x, y);
+            if (targetPoint.x != 0) {
+                double dx = targetPoint.getX() - this.x;
+                double dy = targetPoint.getY() - this.y;
+                currentAngle = MathUtils.normalizeAngle(angle, Math.atan2(dy, dx));
+            }
         }
     }
 
-    public List<Point> scanForReflectors() {
-        List<Point> detectedReflectors = new ArrayList<>();
+    public List<DetectedReflector> scanForReflectors() {
+        List<DetectedReflector> detectedReflectors = new ArrayList<>();
         List<Reflector> reflectors = reflectorManager.getReflectors();
 
         for (Reflector reflector : reflectors) {
@@ -73,7 +82,8 @@ public class Radar {
                     && Math.abs(MathUtils.normalizeAngle(angleToReflector,
                             MathUtils.normalizeAngle(angle, this.currentAngle))) <= radarFOV / 2) {
                 this.detectionTargetType = reflector.getSourceType();
-                detectedReflectors.add(new Point((int) reflector.getX(), (int) reflector.getY()));
+                detectedReflectors.add(
+                        new DetectedReflector(reflector.getX(), reflector.getY(), reflector.getReflectanceStrength()));
                 if ("Player".equals(reflector.getSourceType())) {
                     if (rwrManager != null) {
                         SoundPlayer.playRWRSound(0, radarMode);
@@ -102,6 +112,26 @@ public class Radar {
 
         // System.out.println(rwrInfos.size()); // デバッグ用...RWRInfoの数を表示
         return detectedReflectors;
+    }
+
+    public Point getStrongestReflectPoint(double x, double y) {
+        List<DetectedReflector> detectedReflectors = scanForReflectors();
+        double maxStrength = 0;
+        Point strongestPoint = new Point(0, 0);
+
+        for (DetectedReflector reflector : detectedReflectors) {
+            double dx = reflector.getX() - x;
+            double dy = reflector.getY() - y;
+            double distance = Math.sqrt(dx * dx + dy * dy);
+            double strength = reflector.getReflectanceStrength() / distance;
+
+            if (strength > maxStrength) {
+                maxStrength = strength;
+                strongestPoint = new Point((int) reflector.getX(), (int) reflector.getY());
+            }
+        }
+
+        return strongestPoint;
     }
 
     public void draw(Graphics g) {

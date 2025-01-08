@@ -26,9 +26,9 @@ public class ReflectorManager {
     public void updateReflectors() {
         synchronized (reflectors) {
             reflectors.removeIf(reflector -> {
-                if (reflector instanceof Flare) {
-                    Flare flare = (Flare) reflector;
-                    return flare.isExpired();
+                if (reflector instanceof Chaff) {
+                    Chaff chaff = (Chaff) reflector;
+                    return chaff.isExpired();
                 }
                 return false;
             });

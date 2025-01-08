@@ -26,9 +26,11 @@ public class MissileSimulator extends JPanel implements KeyListener {
     private ChaffManager chaffManager;
     private LabelManager labelManager;
     private Timer timer;
-    private List<Missile> missiles;
+    private List<IrMissile> irMissiles;
+    private List<ARHMissile> arhMissiles;
     private SmokeTrail smokeTrail;
     private RWRManager rwrManager;
+    private CollisionDetector collisionDetector;
 
     // コンストラクタ
     public MissileSimulator() {
@@ -46,7 +48,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         rwrManager = new RWRManager();
         emitterManager = new EmitterManager();
         reflectorManager = new ReflectorManager();
-        player = new Player(200.0, 200.0, 0.4, emitterManager, reflectorManager, scale, rwrManager);
+        player = new Player(200.0, 200.0, 0.9, emitterManager, reflectorManager, scale, rwrManager);
         emitterManager.addEmitter(player);
         reflectorManager.addReflector(player);
 
@@ -56,7 +58,8 @@ public class MissileSimulator extends JPanel implements KeyListener {
         chaffManager = new ChaffManager(reflectorManager);
         labelManager = new LabelManager(this);
 
-        missiles = Collections.synchronizedList(new ArrayList<>());
+        irMissiles = Collections.synchronizedList(new ArrayList<>());
+        this.collisionDetector = new CollisionDetector(6, irMissiles);
         smokeTrail = new SmokeTrail();
     }
 
@@ -82,8 +85,9 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
     // 更新メソッド
     public void update() {
-        missiles = missileLauncher.getMissiles();
-        player.update(missiles, labelManager);
+        irMissiles = missileLauncher.getIrMissiles();
+        arhMissiles = missileLauncher.getArhMissiles();
+        player.update(labelManager);
         missileLauncher.updateMissileLauncher();
         flareManager.updateFlares();
         chaffManager.updateChaffs();
@@ -92,16 +96,29 @@ public class MissileSimulator extends JPanel implements KeyListener {
         smokeTrail.update();
         SoundPlayer.updateRWRSound();
         generateSmokeTrail();
+        collisionDetector.checkCollisions(player.getX(), player.getY(), missileLauncher.getIrMissiles(),
+                missileLauncher.getArhMissiles(), labelManager);
     }
 
     private void generateSmokeTrail() {
-        synchronized (missiles) {
-            for (Missile missile : missiles) {
-                double smokeAddDelay = MathUtils.clamp(-3.5 * missile.getSpeed() + 10, 2, 60);
-                if (missile.getAge() - missile.getSmokeAddTime() >= smokeAddDelay
-                        && missile.getAge() <= Missile.BURN_TIME_OF_BOOSTER) {
-                    smokeTrail.addParticle(missile.getX(), missile.getY());
-                    missile.setSmokeAddTime(missile.getAge());
+        synchronized (irMissiles) {
+            for (IrMissile irMissile : irMissiles) {
+                double smokeAddDelay = MathUtils.clamp(-3.5 * irMissile.getSpeed() + 10, 2, 60);
+                if (irMissile.getAge() - irMissile.getSmokeAddTime() >= smokeAddDelay
+                        && irMissile.getAge() <= IrMissile.BURN_TIME_OF_BOOSTER) {
+                    smokeTrail.addParticle(irMissile.getX(), irMissile.getY());
+                    irMissile.setSmokeAddTime(irMissile.getAge());
+                }
+            }
+        }
+
+        synchronized (arhMissiles) {
+            for (ARHMissile arhMissile : arhMissiles) {
+                double smokeAddDelay = MathUtils.clamp(-3.5 * arhMissile.getSpeed() + 10, 2, 60);
+                if (arhMissile.getAge() - arhMissile.getSmokeAddTime() >= smokeAddDelay
+                        && arhMissile.getAge() <= ARHMissile.BURN_TIME_OF_BOOSTER) {
+                    smokeTrail.addParticle(arhMissile.getX(), arhMissile.getY());
+                    arhMissile.setSmokeAddTime(arhMissile.getAge());
                 }
             }
         }
@@ -138,7 +155,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
         g2d.fillRect(-backGroundImageSize * getWidth(), -backGroundImageSize * getHeight(),
                 backGroundImageSize * 2 * getWidth(), backGroundImageSize * 2 * getHeight());
 
-        g2d.setColor(new Color(150, 150, 150, 100));
+        g2d.setColor(new Color(150, 150, 150, 50));
         int gridSize = 150;
         for (int i = -getWidth() * backGroundImageSize; i < getWidth() * backGroundImageSize; i += gridSize) {
             g2d.drawLine(i, -getHeight() * backGroundImageSize, i, getHeight() * backGroundImageSize);

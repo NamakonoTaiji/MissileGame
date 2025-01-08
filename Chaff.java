@@ -9,7 +9,7 @@ public class Chaff implements Reflector {
     private double angle;
     private int age = 0;
     private final double CHAFF_SIZE = 2;
-    private final double LIFESPAN = 6000;
+    private final double LIFESPAN = 2000;
 
     public Chaff(double x, double y, double speed, double angle) {
         this.x = x;
