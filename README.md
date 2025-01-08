@@ -42,21 +42,21 @@ Java HotSpot(TM) 64-Bit Server VM (build 23.0.1+11-39, mixed mode, sharing)<br>
 赤外線を放出する対抗手段（フレア）により誘引することができます。<br>
 
 ### レーダー誘導 (Active Radar Homing)
-- アクティブレーダー誘導
+- アクティブレーダー誘導<br>
 レーダー波の反射に向かいます。ARHミサイルはミサイル自体が目標にレーダー波を照射して、その反射を追いかけます。<br>
 一番大きいレーダー反射に向かい、距離が近いほどレーダー反射が大きくなります。(プレイヤーはチャフに対し1.1倍反射が大きいです)<br>
 レーダー波を反射する対抗手段（チャフ）で誘引することができます。
 
 ### 誘引アルゴリズム
-- 単純追尾航法　PPN（Pure Pursuit Navigation）
+- 単純追尾航法　PPN（Pure Pursuit Navigation）<br>
 常に相手を向く形で飛んでいきます。<br>
-- 比例航法 PN (Proportional Navigation)
+- 比例航法 PN (Proportional Navigation)<br>
 相手の移動方向に先回りするように飛んでいきます。<br>
 LOS角という相手と自分を結ぶ線の角度の変化量に定数(たいていの場合3)をかけたものを自身の角速度として飛びます。<br>
-- 修正比例航法 MPN（Modified Proportional Navigation）
+- 修正比例航法 MPN（Modified Proportional Navigation）<br>
 比例航法と単追尾のいいとこどりをした誘導アルゴリズムです。<br>
 比例航法は先回りをする分、外側に膨らむので切り返されると曲がり切れずに通り過ぎてしまう場合があります。<br>
-- 半自動指令照準一致線誘導 SACLOS（Semi-Automatic Command to Line of Sight）
+- 半自動指令照準一致線誘導 SACLOS（Semi-Automatic Command to Line of Sight）<br>
 目標にレーザーを照射し、そのレーザーにミサイルが乗っかるように機動させる誘導方式です。<br>
 光学照準という扱いにしたのでフレアやチャフで妨害できません。<br>
 
