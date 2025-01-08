@@ -64,10 +64,11 @@ public class ARHMissile {
     }
 
     private void updateSeekers() {
-        Point targetPoint = radar.getStrongestReflectPoint(x, y);
-        if (targetPoint.x != 0) {
-            targetX = targetPoint.x;
-            targetY = targetPoint.y;
+        XYCoordinate targetXYCoordinate = radar.getStrongestReflectXYCoordinate(x, y);
+        System.out.println(targetXYCoordinate.x);
+        if (targetXYCoordinate.x != 0) {
+            targetX = targetXYCoordinate.x;
+            targetY = targetXYCoordinate.y;
             double deltaX = targetX - x;
             double deltaY = targetY - y;
             targetAngle = Math.atan2(deltaY, deltaX);
@@ -77,7 +78,7 @@ public class ARHMissile {
     private void updateNavigation() {
         // 修正比例航法
         angleDifference = MathUtils.normalizeAngle(targetAngle, oldAngle) * 3
-                + MathUtils.normalizeAngle(targetAngle, angle) * 0.0010;
+                + MathUtils.normalizeAngle(targetAngle, angle) * 0.0015;
         oldAngle = targetAngle;
         angleDifference = MathUtils.clamp(angleDifference, -MISSILE_MAX_TURN_RATE, MISSILE_MAX_TURN_RATE);
         angle += angleDifference;

@@ -85,6 +85,7 @@ public class MissileSimulator extends JPanel implements KeyListener {
 
     // 更新メソッド
     public void update() {
+        System.out.println("MissileSimulator.update");
         irMissiles = missileLauncher.getIrMissiles();
         arhMissiles = missileLauncher.getArhMissiles();
         player.update(labelManager);

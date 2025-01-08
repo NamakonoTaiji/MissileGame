@@ -1,9 +1,7 @@
 import java.awt.*;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.Iterator;
 
 public class Radar {
     private String detectionTargetType = "None";
@@ -58,10 +56,10 @@ public class Radar {
         } else if (radarMode.equals("CLOCKWISE")) {
             currentAngle = MathUtils.normalizeAngle(currentAngle + radarSweepSpeed, 0);
         } else if (radarMode.equals("Track") || radarMode.equals("Launch")) {
-            Point targetPoint = getStrongestReflectPoint(x, y);
-            if (targetPoint.x != 0) {
-                double dx = targetPoint.getX() - this.x;
-                double dy = targetPoint.getY() - this.y;
+            XYCoordinate targetXYCoordinate = getStrongestReflectXYCoordinate(x, y);
+            if (targetXYCoordinate.x != 0) {
+                double dx = targetXYCoordinate.x - this.x;
+                double dy = targetXYCoordinate.y - this.y;
                 currentAngle = MathUtils.normalizeAngle(angle, Math.atan2(dy, dx));
             }
         }
@@ -114,10 +112,10 @@ public class Radar {
         return detectedReflectors;
     }
 
-    public Point getStrongestReflectPoint(double x, double y) {
+    public XYCoordinate getStrongestReflectXYCoordinate(double x, double y) {
         List<DetectedReflector> detectedReflectors = scanForReflectors();
         double maxStrength = 0;
-        Point strongestPoint = new Point(0, 0);
+        XYCoordinate strongestXYCoordinate = new XYCoordinate(0, 0);
 
         for (DetectedReflector reflector : detectedReflectors) {
             double dx = reflector.getX() - x;
@@ -127,11 +125,11 @@ public class Radar {
 
             if (strength > maxStrength) {
                 maxStrength = strength;
-                strongestPoint = new Point((int) reflector.getX(), (int) reflector.getY());
+                strongestXYCoordinate = new XYCoordinate(reflector.getX(), reflector.getY());
             }
         }
 
-        return strongestPoint;
+        return strongestXYCoordinate;
     }
 
     public void draw(Graphics g) {
