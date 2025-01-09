@@ -3,7 +3,7 @@
 import java.awt.*;
 import java.util.List;
 
-public class IrMissile {
+public class MissileIR {
     // 定数
     private static final double DRAG_COEFFICIENT = 0.01; // 抗力係数
     private static final double AIR_DENSITY = 1.225; // 空気密度 (kg/m^3)
@@ -39,7 +39,7 @@ public class IrMissile {
     private MissileLauncher missileLauncher;
 
     // コンストラクタ
-    public IrMissile(double x, double y, double speed, double angle, String navigationMode,
+    public MissileIR(double x, double y, double speed, double angle, String navigationMode,
             EmitterManager emitterManager, Player player, MissileLauncher missileLauncher) {
         this.x = x;
         this.y = y;
@@ -48,12 +48,12 @@ public class IrMissile {
         this.speed = speed;
         this.angle = angle;
         this.targetAngle = angle;
-        this.navigationMode = navigationMode;
-        this.seekerAngle = angle;
         this.oldAngle = angle;
+        this.seekerAngle = angle;
+        this.seekerFOV = NORMAL_SEEKER_FOV;
+        this.navigationMode = navigationMode;
         this.emitterManager = emitterManager;
         this.player = player;
-        this.seekerFOV = NORMAL_SEEKER_FOV;
         this.missileLauncher = missileLauncher;
         this.isCloseSoundPlayed = false;
         this.isMissileSoundPlayed = false;
@@ -68,7 +68,7 @@ public class IrMissile {
         age++;
     }
 
-    // レーダーで補足した熱源の座標を更新
+    // シーカーが補足した熱源の座標を更新
     private void updateSeekers() {
         List<Emitter> emitters = emitterManager.getEmitters();
         double weightedSumX = 0;

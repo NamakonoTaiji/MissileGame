@@ -8,8 +8,8 @@ public class CollisionDetector {
     // フィールド
     private double hitRadius;
     private Random random = new Random(); // 乱数生成器
-    private List<IrMissile> irMissiles;
-    private List<ARHMissile> arhMissiles;
+    private List<MissileIR> irMissiles;
+    private List<MissileARH> arhMissiles;
     private LabelManager labelManager;
 
     // 被弾音ファイルのリスト
@@ -20,14 +20,14 @@ public class CollisionDetector {
     };
 
     // コンストラクタ
-    public CollisionDetector(double hitRadius, List<IrMissile> missiles) {
+    public CollisionDetector(double hitRadius, List<MissileIR> missiles) {
         this.hitRadius = hitRadius;
         this.irMissiles = missiles;
     }
 
     // 衝突判定メソッド
-    public void checkCollisions(double playerX, double playerY, List<IrMissile> irMissiles,
-            List<ARHMissile> arhMissiles, LabelManager labelManager) {
+    public void checkCollisions(double playerX, double playerY, List<MissileIR> irMissiles,
+            List<MissileARH> arhMissiles, LabelManager labelManager) {
         double missileHitRadius = 1.0;
         this.labelManager = labelManager;
         this.irMissiles = irMissiles;
@@ -35,9 +35,9 @@ public class CollisionDetector {
 
         // プレイヤーとIRミサイルの距離を計算し、ミサイルがプレイヤーに当たっているか判定
         synchronized (irMissiles) {
-            Iterator<IrMissile> iterator = irMissiles.iterator();
+            Iterator<MissileIR> iterator = irMissiles.iterator();
             while (iterator.hasNext()) {
-                IrMissile irMissile = iterator.next();
+                MissileIR irMissile = iterator.next();
                 double distance = Math.sqrt(
                         Math.pow(irMissile.getX() - playerX, 2) + Math.pow(irMissile.getY() - playerY, 2));
                 if (distance < hitRadius + missileHitRadius) {
@@ -49,9 +49,9 @@ public class CollisionDetector {
 
         // プレイヤーとARHミサイルの距離を計算し、ミサイルがプレイヤーに当たっているか判定
         synchronized (arhMissiles) {
-            Iterator<ARHMissile> iterator = arhMissiles.iterator();
+            Iterator<MissileARH> iterator = arhMissiles.iterator();
             while (iterator.hasNext()) {
-                ARHMissile arhMissile = iterator.next();
+                MissileARH arhMissile = iterator.next();
                 double distance = Math.sqrt(
                         Math.pow(arhMissile.getX() - playerX, 2) + Math.pow(arhMissile.getY() - playerY, 2));
                 if (distance < hitRadius + missileHitRadius) {
@@ -63,7 +63,7 @@ public class CollisionDetector {
     }
 
     // IRミサイル被弾時処理
-    private void handleHit(IrMissile irMissile) {
+    private void handleHit(MissileIR irMissile) {
         String message = "Hit detected!";
         System.out.println(message);
         if (labelManager != null) {
@@ -73,7 +73,7 @@ public class CollisionDetector {
     }
 
     // ARHミサイル被弾時処理
-    private void handleHit(ARHMissile arhMissile) {
+    private void handleHit(MissileARH arhMissile) {
         String message = "Hit detected!";
         System.out.println(message);
         if (labelManager != null) {

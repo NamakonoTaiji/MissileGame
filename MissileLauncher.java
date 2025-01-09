@@ -27,8 +27,8 @@ public class MissileLauncher {
     private String radarMode = "CLOCKWISE";
     private String navigationMode;
 
-    private List<IrMissile> irMissiles;
-    private List<ARHMissile> arhMissiles;
+    private List<MissileIR> irMissiles;
+    private List<MissileARH> arhMissiles;
     private EmitterManager emitterManager;
     private Player player;
     private Radar searchRadar;
@@ -65,12 +65,12 @@ public class MissileLauncher {
     public void launchMissile() {
         if (isLoaded) {
             if (!navigationMode.equals("ARH")) {
-                IrMissile irMissile = new IrMissile(x, y, launchSpeed, launcherToTargetAngle, navigationMode,
+                MissileIR irMissile = new MissileIR(x, y, launchSpeed, launcherToTargetAngle, navigationMode,
                         emitterManager, player, this);
                 irMissiles.add(irMissile);
 
             } else if (navigationMode.equals("ARH")) {
-                ARHMissile arhMissile = new ARHMissile(id, x, y, launchSpeed, launcherToTargetAngle, navigationMode,
+                MissileARH arhMissile = new MissileARH(id, x, y, launchSpeed, launcherToTargetAngle, navigationMode,
                         reflectorManager, player, rwrManager);
                 arhMissiles.add(arhMissile);
             }
@@ -126,9 +126,9 @@ public class MissileLauncher {
     // ミサイルの更新
     private void updateMissileList() {
         synchronized (irMissiles) {
-            Iterator<IrMissile> iterator = irMissiles.iterator();
+            Iterator<MissileIR> iterator = irMissiles.iterator();
             while (iterator.hasNext()) {
-                IrMissile irMissile = iterator.next();
+                MissileIR irMissile = iterator.next();
                 irMissile.update();
                 if (irMissile.isExpired()) {
                     iterator.remove();
@@ -137,9 +137,9 @@ public class MissileLauncher {
         }
 
         synchronized (arhMissiles) {
-            Iterator<ARHMissile> arhIterator = arhMissiles.iterator();
+            Iterator<MissileARH> arhIterator = arhMissiles.iterator();
             while (arhIterator.hasNext()) {
-                ARHMissile arhMissile = arhIterator.next();
+                MissileARH arhMissile = arhIterator.next();
                 arhMissile.update();
                 if (arhMissile.isExpired()) {
                     arhIterator.remove();
@@ -181,13 +181,13 @@ public class MissileLauncher {
     // ミサイルの描画
     private void drawMissiles(Graphics g) {
         synchronized (irMissiles) {
-            for (IrMissile irMissile : irMissiles) {
+            for (MissileIR irMissile : irMissiles) {
                 irMissile.draw(g);
             }
         }
 
         synchronized (arhMissiles) {
-            for (ARHMissile arhMissile : arhMissiles) {
+            for (MissileARH arhMissile : arhMissiles) {
                 arhMissile.draw(g);
             }
         }
@@ -230,11 +230,11 @@ public class MissileLauncher {
                 Math.pow(targetX - x, 2) + Math.pow(targetY - y, 2));
     }
 
-    public List<IrMissile> getIrMissiles() {
+    public List<MissileIR> getIrMissiles() {
         return irMissiles;
     }
 
-    public List<ARHMissile> getArhMissiles() {
+    public List<MissileARH> getArhMissiles() {
         return arhMissiles;
     }
 

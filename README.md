@@ -50,7 +50,7 @@ Java HotSpot(TM) 64-Bit Server VM (build 23.0.1+11-39, mixed mode, sharing)<br>
 ### 誘引アルゴリズム
 - 単純追尾航法　PPN（Pure Pursuit Navigation）<br>
 常に相手を向く形で飛んでいきます。<br>
-- 比例航法 PN (Proportional Navigation)
+- 比例航法 PN (Proportional Navigation) <br>
 相手の移動方向に先回りするように飛んでいきます。<br>
 LOS角という相手と自分を結ぶ線の角度の変化量に定数(たいていの場合3)をかけたものを自身の角速度として飛びます。<br>
 - 修正比例航法 MPN（Modified Proportional Navigation）<br>

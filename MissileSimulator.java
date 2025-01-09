@@ -29,8 +29,8 @@ public class MissileSimulator extends JPanel implements KeyListener {
     private ChaffManager chaffManager;
     private LabelManager labelManager;
     private Timer timer;
-    private List<IrMissile> irMissiles;
-    private List<ARHMissile> arhMissiles;
+    private List<MissileIR> irMissiles;
+    private List<MissileARH> arhMissiles;
     private SmokeTrail smokeTrail;
     private RWRManager rwrManager;
     private CollisionDetector collisionDetector;
@@ -109,10 +109,10 @@ public class MissileSimulator extends JPanel implements KeyListener {
     // 煙の生成
     private void generateSmokeTrail() {
         synchronized (irMissiles) {
-            for (IrMissile irMissile : irMissiles) {
+            for (MissileIR irMissile : irMissiles) {
                 double smokeAddDelay = MathUtils.clamp(-3.5 * irMissile.getSpeed() + 10, 2, 60);
                 if (irMissile.getAge() - irMissile.getSmokeAddTime() >= smokeAddDelay
-                        && irMissile.getAge() <= IrMissile.BURN_TIME_OF_BOOSTER) {
+                        && irMissile.getAge() <= MissileIR.BURN_TIME_OF_BOOSTER) {
                     smokeTrail.addParticle(irMissile.getX(), irMissile.getY());
                     irMissile.setSmokeAddTime(irMissile.getAge());
                 }
@@ -120,10 +120,10 @@ public class MissileSimulator extends JPanel implements KeyListener {
         }
 
         synchronized (arhMissiles) {
-            for (ARHMissile arhMissile : arhMissiles) {
+            for (MissileARH arhMissile : arhMissiles) {
                 double smokeAddDelay = MathUtils.clamp(-3.5 * arhMissile.getSpeed() + 10, 2, 60);
                 if (arhMissile.getAge() - arhMissile.getSmokeAddTime() >= smokeAddDelay
-                        && arhMissile.getAge() <= ARHMissile.BURN_TIME_OF_BOOSTER) {
+                        && arhMissile.getAge() <= MissileARH.BURN_TIME_OF_BOOSTER) {
                     smokeTrail.addParticle(arhMissile.getX(), arhMissile.getY());
                     arhMissile.setSmokeAddTime(arhMissile.getAge());
                 }

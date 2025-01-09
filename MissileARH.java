@@ -2,7 +2,7 @@
 
 import java.awt.*;
 
-public class ARHMissile {
+public class MissileARH {
 
     // 定数
     private static final double DRAG_COEFFICIENT = 0.01; // 抗力係数
@@ -36,7 +36,7 @@ public class ARHMissile {
     private Radar radar;
 
     // コンストラクタ
-    public ARHMissile(String id, double x, double y, double speed, double angle, String navigationMode,
+    public MissileARH(String id, double x, double y, double speed, double angle, String navigationMode,
             ReflectorManager reflectorManager, Player player, RWRManager rwrManager) {
         this.x = x;
         this.y = y;
@@ -69,17 +69,12 @@ public class ARHMissile {
     private void updateSeekers() {
         XYCoordinate targetXYCoordinate = radar.getStrongestReflectXYCoordinate(x, y);
         if (targetXYCoordinate.x != 0) {
-            updateTargetPosition(targetXYCoordinate);
+            targetX = targetXYCoordinate.x;
+            targetY = targetXYCoordinate.y;
+            double deltaX = targetX - x;
+            double deltaY = targetY - y;
+            targetAngle = Math.atan2(deltaY, deltaX);
         }
-    }
-
-    // レーダーで補足した反射体の座標を更新
-    private void updateTargetPosition(XYCoordinate targetXYCoordinate) {
-        targetX = targetXYCoordinate.x;
-        targetY = targetXYCoordinate.y;
-        double deltaX = targetX - x;
-        double deltaY = targetY - y;
-        targetAngle = Math.atan2(deltaY, deltaX);
     }
 
     // ミサイルの角度を更新
